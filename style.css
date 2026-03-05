@@ -1,0 +1,168 @@
+:root {
+    --bg-main: #0f172a;
+    --bg-card: #1e293b;
+    --bg-sidebar: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --border-color: #334155;
+    --accent-color: #6366f1;
+    --accent-hover: #4f46e5;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+}
+
+/* Custom scrollbar for a cleaner look */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Glassmorphism effects */
+.glass {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* Sidebar active state */
+nav a.active {
+    background-color: rgba(99, 102, 241, 0.1);
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+/* News item hover */
+.news-item:hover {
+    border-color: var(--accent-color);
+    background-color: rgba(30, 41, 59, 0.8);
+}
+
+/* Resource card hover */
+.resource-card:hover .resource-overlay {
+    opacity: 1;
+}
+
+.resource-overlay {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* Modal States */
+#add-modal.active, #folder-modal.active, #move-modal.active, #news-modal.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#add-modal.active #modal-content, #folder-modal.active #folder-modal-content, #move-modal.active #move-modal-content, #news-modal.active #news-modal-content {
+    transform: scale(1);
+}
+
+/* Context Menu */
+.context-menu {
+    position: fixed;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    min-width: 160px;
+    padding: 6px;
+    display: none;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--text-primary);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.context-menu-item:hover {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--accent-color);
+}
+
+.context-menu-item.danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+/* Toast Notification */
+.toast {
+    background: #334155;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: toastIn 0.3s ease-out forwards;
+    pointer-events: auto;
+}
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.toast.fade-out {
+    animation: toastOut 0.3s ease-in forwards;
+}
+
+@keyframes toastOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    min-width: 180px;
+    padding: 6px;
+}
+
+.dropdown-menu.active {
+    display: block;
+}
