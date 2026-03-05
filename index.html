@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHub - Your Professional Study Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
+            <div class="p-6 flex items-center gap-3">
+                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                    <i data-lucide="book-open" class="w-5 h-5"></i>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight">StudyHub</h1>
+            </div>
+            
+            <nav class="flex-1 px-4 space-y-1">
+                <a href="#" class="flex items-center gap-3 px-3 py-2 text-indigo-600 bg-indigo-50 rounded-lg font-medium transition-colors" data-nav="dashboard">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    Dashboard
+                </a>
+                <a href="#" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors" data-nav="books">
+                    <i data-lucide="book" class="w-5 h-5"></i>
+                    My Books
+                </a>
+                <a href="#" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors" data-nav="videos">
+                    <i data-lucide="video" class="w-5 h-5"></i>
+                    Videos
+                </a>
+                <a href="#" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors" data-nav="notes">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                    Notes
+                </a>
+                <a href="#" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors" data-nav="tasks">
+                    <i data-lucide="check-square" class="w-5 h-5"></i>
+                    Task List
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-slate-100">
+                <div class="flex items-center gap-3 px-3 py-2">
+                    <img src="https://picsum.photos/seed/user/40/40" alt="User" class="w-8 h-8 rounded-full border border-slate-200" referrerPolicy="no-referrer">
+                    <div class="flex-1 overflow-hidden">
+                        <p class="text-sm font-medium truncate">Jashuva</p>
+                        <p class="text-xs text-slate-500 truncate">Pro Student</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <!-- Top Bar -->
+            <header class="h-16 bg-white border-bottom border-slate-200 flex items-center justify-between px-8 shrink-0">
+                <div class="flex-1 max-w-xl">
+                    <div class="relative">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                        <input type="text" placeholder="Global Search (Books, Videos, Notes...)" class="w-full pl-10 pr-4 py-2 bg-slate-100 border-transparent focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none">
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        Quick Add
+                    </button>
+                    <button class="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard Grid -->
+            <main class="flex-1 overflow-y-auto p-8">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    
+                    <!-- Left: Hot News Feed -->
+                    <section class="lg:col-span-3 space-y-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400">Hot News</h2>
+                            <i data-lucide="rss" class="w-4 h-4 text-slate-400"></i>
+                        </div>
+                        <div id="news-feed" class="space-y-4">
+                            <!-- News items will be injected here -->
+                            <div class="animate-pulse space-y-4">
+                                <div class="h-20 bg-slate-200 rounded-xl"></div>
+                                <div class="h-20 bg-slate-200 rounded-xl"></div>
+                                <div class="h-20 bg-slate-200 rounded-xl"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Center: Resource Gallery -->
+                    <section class="lg:col-span-6 space-y-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-bold text-slate-800">Resource Gallery</h2>
+                            <div class="flex gap-2">
+                                <button class="px-3 py-1 text-xs font-medium bg-white border border-slate-200 rounded-lg hover:bg-slate-50">All</button>
+                                <button class="px-3 py-1 text-xs font-medium text-slate-500 hover:text-slate-800">Books</button>
+                                <button class="px-3 py-1 text-xs font-medium text-slate-500 hover:text-slate-800">Videos</button>
+                            </div>
+                        </div>
+                        <div id="resource-gallery" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Resource cards and Drop Zone will be injected here -->
+                        </div>
+                    </section>
+
+                    <!-- Right: Study Stats & Quick Tasks -->
+                    <section class="lg:col-span-3 space-y-8">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <h3 class="text-sm font-bold text-slate-800 mb-4">Study Progress</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="text-slate-500">Weekly Goal</span>
+                                        <span class="font-medium">75%</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-indigo-500 w-[75%]"></div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4 pt-2">
+                                    <div class="text-center p-3 bg-slate-50 rounded-xl">
+                                        <p class="text-lg font-bold text-indigo-600">12</p>
+                                        <p class="text-[10px] uppercase tracking-wide text-slate-500">Hours</p>
+                                    </div>
+                                    <div class="text-center p-3 bg-slate-50 rounded-xl">
+                                        <p class="text-lg font-bold text-emerald-600">4</p>
+                                        <p class="text-[10px] uppercase tracking-wide text-slate-500">Completed</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <h3 class="text-sm font-bold text-slate-800">Upcoming Tasks</h3>
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                                    <div class="w-2 h-2 rounded-full bg-amber-400"></div>
+                                    <p class="text-sm flex-1">Read Chapter 5: Quantum Physics</p>
+                                    <span class="text-[10px] font-medium text-slate-400">2h</span>
+                                </div>
+                                <div class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                                    <div class="w-2 h-2 rounded-full bg-indigo-400"></div>
+                                    <p class="text-sm flex-1">Watch React Advanced Patterns</p>
+                                    <span class="text-[10px] font-medium text-slate-400">Tomorrow</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+
+        <!-- Floating Chat Widget -->
+        <div id="chat-widget" class="fixed bottom-6 right-6 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col transition-all duration-300 translate-y-0 opacity-100 z-50 overflow-hidden" style="height: 450px;">
+            <div class="p-4 bg-indigo-600 text-white flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                    <span class="text-sm font-bold">Study Assistant</span>
+                </div>
+                <button id="close-chat" class="p-1 hover:bg-indigo-500 rounded transition-colors">
+                    <i data-lucide="minus" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+                <div class="flex gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+                        <i data-lucide="bot" class="w-4 h-4 text-indigo-600"></i>
+                    </div>
+                    <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-100 text-sm shadow-sm">
+                        Hello! I'm your Study Assistant. How can I help you with your research today?
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-white">
+                <div class="relative">
+                    <input id="chat-input" type="text" placeholder="Ask anything..." class="w-full pl-4 pr-10 py-2 bg-slate-100 border-transparent focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm outline-none transition-all">
+                    <button id="send-chat" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Minimized Chat Trigger -->
+        <button id="open-chat" class="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-all duration-300 scale-0 opacity-0 z-50">
+            <i data-lucide="message-square" class="w-6 h-6"></i>
+        </button>
+
+        <!-- Quick Add Modal -->
+        <div id="add-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-all duration-300" id="modal-content">
+                <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-indigo-50/50">
+                    <h3 class="text-lg font-bold text-slate-800">Add New Resource</h3>
+                    <button id="close-modal" class="p-2 hover:bg-white rounded-xl transition-colors text-slate-400 hover:text-slate-600">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="add-resource-form" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Resource Title</label>
+                        <input type="text" id="res-title" required placeholder="e.g. Atomic Habits" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none transition-all">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Type</label>
+                            <select id="res-type" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none transition-all">
+                                <option value="Book">Book</option>
+                                <option value="Video">Video</option>
+                                <option value="Website">Website</option>
+                                <option value="PDF">PDF</option>
+                                <option value="Other">Other (Custom)</option>
+                            </select>
+                        </div>
+                        <div id="custom-type-container" class="hidden">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Custom Type Name</label>
+                            <input type="text" id="res-custom-type" placeholder="e.g. Podcast" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none transition-all">
+                        </div>
+                        <div id="author-container">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Author/Source</label>
+                            <input type="text" id="res-author" required placeholder="e.g. James Clear" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none transition-all">
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400">Resource Content</label>
+                        <div class="flex gap-4 p-1 bg-slate-100 rounded-xl">
+                            <button type="button" id="toggle-url" class="flex-1 py-2 text-xs font-bold rounded-lg bg-white shadow-sm text-indigo-600 transition-all">URL / Link</button>
+                            <button type="button" id="toggle-file" class="flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all">File Upload</button>
+                        </div>
+                        
+                        <div id="url-input-container" class="space-y-3">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="res-offline" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                <label for="res-offline" class="text-xs text-slate-600 font-medium">This is an offline/local resource</label>
+                            </div>
+                            <input type="text" id="res-url" placeholder="https://example.com or D:/books/study.pdf" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none transition-all">
+                            <p class="text-[10px] text-slate-400 italic">Note: Browsers may block local file links for security. You might need to right-click and "Copy link address" to open manually.</p>
+                        </div>
+                        
+                        <div id="file-input-container" class="hidden">
+                            <div class="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-indigo-400 transition-colors cursor-pointer bg-slate-50/50" onclick="document.getElementById('res-file').click()">
+                                <i data-lucide="upload-cloud" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
+                                <p class="text-xs text-slate-500"><span class="font-bold text-indigo-600">Click to upload</span> or drag and drop</p>
+                                <p class="text-[10px] text-slate-400 mt-1">PDF, DOCX, MP4 (Max 50MB)</p>
+                                <input type="file" id="res-file" class="hidden">
+                            </div>
+                            <div id="file-name-display" class="mt-2 text-[10px] text-indigo-600 font-medium hidden"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Tags (comma separated)</label>
+                        <input type="text" id="res-tags" placeholder="e.g. Productivity, Science" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none transition-all">
+                    </div>
+                    <div class="pt-4">
+                        <button type="submit" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                            Save Resource
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Viewer Modal -->
+    <div id="viewer-modal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[200] flex flex-col opacity-0 pointer-events-none transition-all duration-300">
+        <div class="h-16 bg-white/10 border-b border-white/10 flex items-center justify-between px-6 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                </div>
+                <h3 id="viewer-title" class="text-white font-bold truncate max-w-md">Local File Viewer</h3>
+            </div>
+            <button id="close-viewer" class="p-2 hover:bg-white/10 rounded-xl transition-colors text-white/60 hover:text-white">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+        <div id="viewer-content" class="flex-1 flex items-center justify-center overflow-hidden p-4">
+            <!-- Content injected here (iframe or video) -->
+            <div class="text-center text-white/40">
+                <i data-lucide="loader-2" class="w-12 h-12 animate-spin mx-auto mb-4"></i>
+                <p>Loading your resource...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
