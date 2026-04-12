@@ -1,17 +1,114 @@
 [
     {
-        "date": "2026-12-22",
-        "desc": "cement",
-        "amt": "5000"
+        "date": "2026-01-01",
+        "desc": "jash",
+        "amt": 500
+    },
+    
+    {
+        "date": "2025-09-10",
+        "desc": "Auto rent (Shuttering boxes)",
+        "amt": 300
     },
     {
-        "date": "0082-04-05",
-        "desc": "dsslijf",
-        "amt": "8768"
+        "date": "2025-09-11",
+        "desc": "Shuttering wage",
+        "amt": 1500
     },
     {
-        "date": "5454-04-05",
-        "desc": "sdf",
-        "amt": "54"
+        "date": "2025-09-11",
+        "desc": "Cover",
+        "amt": 250
+    },
+    {
+        "date": "2025-09-11",
+        "desc": "Nails",
+        "amt": 75
+    },
+    {
+        "date": "2025-09-18",
+        "desc": "Cement",
+        "amt": 4070
+    },
+    {
+        "date": "2025-09-20",
+        "desc": "Chaukhat holders",
+        "amt": 200
+    },
+    {
+        "date": "2025-09-21",
+        "desc": "Auto rent",
+        "amt": 100
+    },
+    {
+        "date": "2025-11-01",
+        "desc": "Nails, Binding wire",
+        "amt": 11600
+    },
+    {
+        "date": "2025-11-01",
+        "desc": "Auto rent",
+        "amt": 600
+    },
+    {
+        "date": "2025-11-02",
+        "desc": "Shuttering",
+        "amt": 20000
+    },
+    {
+        "date": "2025-11-05",
+        "desc": "Rods & slab requirements",
+        "amt": 57450
+    },
+    {
+        "date": "2025-11-05",
+        "desc": "Sticks & Auto rent",
+        "amt": 2300
+    },
+    {
+        "date": "2025-11-08",
+        "desc": "Shuttering",
+        "amt": 10000
+    },
+    {
+        "date": "2025-11-10",
+        "desc": "Cement advance for slab",
+        "amt": 10000
+    },
+    {
+        "date": "2025-11-10",
+        "desc": "Previous cement",
+        "amt": 300
+    },
+    {
+        "date": "2025-11-11",
+        "desc": "Sand",
+        "amt": 41000
+    },
+    {
+        "date": "2025-11-12",
+        "desc": "Cement (70 bags / 60 bags used)",
+        "amt": 11750
+    },
+    {
+        "date": "2025-11-13",
+        "desc": "Mixer (Miller)",
+        "amt": 13300
+    },
+    {
+        "date": "2025-11-13",
+        "desc": "Pipes",
+        "amt": 3100
+    },
+    {
+        "date": "2025-11-13",
+        "desc": "Expenses",
+        "amt": 1500
+    },
+    {
+        "date": "2025-11-16",
+        "desc": "Shuttering",
+        "amt": 10000
     }
+
 ]
