@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Construction Log 2026</title>
+    <style>
+        :root { --bg: #050508; --card: #11111a; --primary: #00f3ff; --accent: #ff00ff; --text: #e0e0e0; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .container { max-width: 900px; margin: 0 auto; padding-top: 60px; }
+        .add-btn { position: fixed; top: 15px; right: 15px; width: 50px; height: 50px; background: var(--accent); color: white; border: none; border-radius: 12px; font-size: 28px; cursor: pointer; z-index: 1000; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-content { background: var(--card); padding: 30px; border-radius: 15px; text-align: center; width: 85%; }
+        .gw-option { display: block; width: 100%; padding: 15px; margin: 10px 0; background: #1a1a24; color: white; border: 1px solid var(--primary); border-radius: 8px; text-decoration: none; }
+        .stats-card { background: var(--card); padding: 20px; border-radius: 12px; border-left: 5px solid var(--primary); margin-bottom: 20px; }
+        .controls { display: grid; gap: 15px; margin-bottom: 20px; }
+        input, select { background: #1a1a24; border: 1px solid #333; color: white; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; }
+        .table-wrapper { overflow-x: auto; background: var(--card); border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; min-width: 500px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #1a1a24; }
+        th { background: #16161e; color: var(--primary); font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+
+    <button class="add-btn" onclick="toggleModal(true)">+</button>
+
+    <div id="gatewayModal" class="modal">
+        <div class="modal-content">
+            <h3>Select Gateway</h3>
+            <a href="http://10.18.34.222:8080" class="gw-option">Balraj (Dad)</a>
+            <a href="http://192.168.43.222:8080" class="gw-option">Debora (Sis)</a>
+            <button onclick="toggleModal(false)" style="color: #555; background:none; border:none; margin-top:10px;">Close</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="stats-card">
+            <span id="filter-status">Total Expenditure</span>
+            <h2 id="grand-total">₹0</h2>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="search" placeholder="Search..." oninput="filterData()">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div><small>From</small><input type="date" id="start-date" value="2026-01-01" onchange="filterData()"></div>
+                <div><small>To</small><input type="date" id="end-date" value="2026-12-31" onchange="filterData()"></div>
+            </div>
+            <select id="sort-main" onchange="filterData()">
+                <option value="newest">Date: Newest to Oldest</option>
+                <option value="oldest">Date: Oldest to Newest</option>
+                <option value="high">Price: High to Low</option>
+                <option value="low">Price: Low to High</option>
+            </select>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr><th>S.No</th><th>Date</th><th>Description</th><th>Amount</th></tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+
+        async function init() {
+            try {
+                const res = await fetch('data.json');
+                allData = await res.json();
+                filterData();
+            } catch (e) { console.error("Data load failed"); }
+        }
+
+        function toggleModal(s) { document.getElementById('gatewayModal').style.display = s ? 'flex' : 'none'; }
+
+        // Formats YYYY-MM-DD to DD-MM-YYYY
+        function fmtDate(dStr) {
+            const [y, m, d] = dStr.split('-');
+            return `${d}-${m}-${y}`;
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('table-body');
+            let total = 0;
+
+            tbody.innerHTML = data.map((item, index) => {
+                const amt = parseFloat(item.amt) || 0;
+                total += amt;
+                return `
+                    <tr>
+                        <td style="color:#666">${index + 1}</td>
+                        <td>${fmtDate(item.date)}</td>
+                        <td>${item.desc}</td>
+                        <td style="color:var(--primary); font-weight:bold">₹${amt.toLocaleString('en-IN')}</td>
+                    </tr>`;
+            }).join('');
+            document.getElementById('grand-total').innerText = "₹" + total.toLocaleString('en-IN');
+        }
+
+        function filterData() {
+            const search = document.getElementById('search').value.toLowerCase();
+            const start = document.getElementById('start-date').value;
+            const end = document.getElementById('end-date').value;
+            const sort = document.getElementById('sort-main').value;
+
+            let f = allData.filter(i => {
+                return i.desc.toLowerCase().includes(search) && 
+                       (!start || i.date >= start) && 
+                       (!end || i.date <= end);
+            });
+
+            if (sort === "newest") f.sort((a,b) => b.date.localeCompare(a.date));
+            if (sort === "oldest") f.sort((a,b) => a.date.localeCompare(b.date));
+            if (sort === "high") f.sort((a,b) => b.amt - a.amt);
+            if (sort === "low") f.sort((a,b) => a.amt - b.amt);
+
+            renderTable(f);
+        }
+        init();
+    </script>
+</body>
+</html>
