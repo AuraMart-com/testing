@@ -43,8 +43,8 @@
         <div class="controls">
             <input type="text" id="search" placeholder="Search..." oninput="filterData()">
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div><small>From</small><input type="date" id="start-date" value="2026-01-01" onchange="filterData()"></div>
-                <div><small>To</small><input type="date" id="end-date" value="2026-12-31" onchange="filterData()"></div>
+                <div><small>From</small><input type="date" id="start-date" value="" onchange="filterData()"></div>
+                <div><small>To</small><input type="date" id="end-date" value="" onchange="filterData()"></div>
             </div>
             <select id="sort-main" onchange="filterData()">
                 <option value="newest">Date: Newest to Oldest</option>
