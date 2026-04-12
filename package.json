@@ -1,9 +1,0 @@
-{
-  "name": "auramart-vanilla",
-  "version": "1.0.0",
-  "description": "Vanilla JS e-commerce site",
-  "scripts": {
-    "start": "npx serve ."
-  },
-  "dependencies": {}
-}
