@@ -343,6 +343,343 @@
         "date": "2025-11-16",
         "desc": "Shuttering",
         "amt": 10000
+    },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    {
+        "date": "2026-01-02",
+        "desc": "Coolie wage for walls",
+        "amt": 800
+    },
+    {
+        "date": "2026-01-07",
+        "desc": "Electrician pipes",
+        "amt": 2000
+    },
+    {
+        "date": "2026-01-07",
+        "desc": "Chipping",
+        "amt": 500
+    },
+    {
+        "date": "2026-01-08",
+        "desc": "Electrician Equipments",
+        "amt": 1300
+    },
+    {
+        "date": "2026-01-08",
+        "desc": "Meshtri",
+        "amt": 1500
+    },
+    {
+        "date": "2026-01-09",
+        "desc": "Sand",
+        "amt": 12300
+    },
+    {
+        "date": "2026-01-10",
+        "desc": "Naveen (wage)",
+        "amt": 1000
+    },
+    {
+        "date": "2026-01-10",
+        "desc": "Cement (7 bags)",
+        "amt": 2000
+    },
+    {
+        "date": "2026-01-10",
+        "desc": "Meshtri",
+        "amt": 1500
+    },
+    {
+        "date": "2026-01-11",
+        "desc": "Meshtri",
+        "amt": 500
+    },
+    {
+        "date": "2026-01-11",
+        "desc": "Labour (2 members)",
+        "amt": 1600
+    },
+    {
+        "date": "2026-01-12",
+        "desc": "Meshtri",
+        "amt": 500
+    },
+    {
+        "date": "2026-01-12",
+        "desc": "Labour (2 members)",
+        "amt": 1600
+    },
+    {
+        "date": "2026-01-14",
+        "desc": "Labour (2 members)",
+        "amt": 1600
+    },
+    {
+        "date": "2026-01-14",
+        "desc": "Meshtri",
+        "amt": 500
+    },
+    {
+        "date": "2026-01-14",
+        "desc": "Electrician wage",
+        "amt": 3000
+    },
+    {
+        "date": "2026-01-15",
+        "desc": "Meshtri",
+        "amt": 1000
+    },
+    {
+        "date": "2026-01-16",
+        "desc": "Labour wage (1)",
+        "amt": 800
+    },
+    {
+        "date": "2026-01-16",
+        "desc": "Meshtri",
+        "amt": 200
+    },
+    {
+        "date": "2026-01-17",
+        "desc": "Meshtri",
+        "amt": 500
+    },
+    {
+        "date": "2026-01-17",
+        "desc": "Cement (16 bags)",
+        "amt": 4240
+    },
+    {
+        "date": "2026-01-18",
+        "desc": "Labour (2 members) (1x2)(1x1)",
+        "amt": 2400
+    },
+    {
+        "date": "2026-01-18",
+        "desc": "Meshtri",
+        "amt": 500
+    },
+    {
+        "date": "2026-01-19",
+        "desc": "Labour (2 members)",
+        "amt": 1600
+    },
+    {
+        "date": "2026-01-19",
+        "desc": "Meshtri",
+        "amt": 500
+    },
+    {
+        "date": "2026-01-20",
+        "desc": "Sand",
+        "amt": 10000
+    },
+    {
+        "date": "2026-01-20",
+        "desc": "Labour",
+        "amt": 1000
+    },
+    {
+        "date": "2026-01-20",
+        "desc": "Meshtri",
+        "amt": 0
+    },
+    {
+        "date": "2026-01-21",
+        "desc": "Labour",
+        "amt": 1000
+    },
+    {
+        "date": "2026-01-21",
+        "desc": "Meshtri",
+        "amt": 500
+    },
+
+
+
+
+
+
+
+
+
+
+
+    
+    {
+        "date": "2026-01-22",
+        "desc": "Labour (2 members)",
+        "amt": 2000
+    },
+    {
+        "date": "2026-01-22",
+        "desc": "Meshtri",
+        "amt": 1800
+    },
+    {
+        "date": "2026-01-23",
+        "desc": "Plumber pipes",
+        "amt": 6500
+    },
+    {
+        "date": "2026-01-24",
+        "desc": "Meshtri",
+        "amt": 500
+    },
+    {
+        "date": "2026-01-25",
+        "desc": "Labour (2 members x 2 days)",
+        "amt": 3200
+    },
+    {
+        "date": "2026-01-25",
+        "desc": "Meshtri",
+        "amt": 1500
+    },
+    {
+        "date": "2026-01-28",
+        "desc": "Meshtri (Advance)",
+        "amt": 500
+    },
+    {
+        "date": "2026-01-28",
+        "desc": "Plumber pipes",
+        "amt": 500
+    },
+    {
+        "date": "2026-02-01",
+        "desc": "Labour",
+        "amt": 1600
+    },
+    {
+        "date": "2026-02-01",
+        "desc": "Meshtri",
+        "amt": 1000
+    },
+    {
+        "date": "2026-02-02",
+        "desc": "Labour",
+        "amt": 800
+    },
+    {
+        "date": "2026-02-03",
+        "desc": "Labour",
+        "amt": 800
+    },
+    {
+        "date": "2026-02-06",
+        "desc": "Meshtri",
+        "amt": 500
+    },
+    {
+        "date": "2026-02-07",
+        "desc": "Driver",
+        "amt": 13900
+    },
+    {
+        "date": "2026-02-08",
+        "desc": "Driver",
+        "amt": 810
+    },
+    {
+        "date": "2026-02-10",
+        "desc": "Cement",
+        "amt": 6800
+    },
+    {
+        "date": "2026-02-11",
+        "desc": "Granite",
+        "amt": 9000
+    },
+    {
+        "date": "2026-02-11",
+        "desc": "Iron Rods",
+        "amt": 1670
+    },
+    {
+        "date": "2026-02-11",
+        "desc": "Tiles",
+        "amt": 35200
+    },
+    {
+        "date": "2026-02-11",
+        "desc": "Vehicle charge",
+        "amt": 2050
+    },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    {
+        "date": "2026-02-13",
+        "desc": "Meshtri",
+        "amt": 1500
+    },
+    {
+        "date": "2026-02-15",
+        "desc": "Meshtri",
+        "amt": 500
+    },
+    {
+        "date": "2026-02-17",
+        "desc": "Tiles things",
+        "amt": 1410
+    },
+    {
+        "date": "2026-02-18",
+        "desc": "Meshtri",
+        "amt": 200
+    },
+    {
+        "date": "2026-02-19",
+        "desc": "Meshtri",
+        "amt": 1000
+    },
+    {
+        "date": "2026-04-11",
+        "desc": "Paint materials",
+        "amt": 16500
     }
 
 ]
