@@ -7,7 +7,354 @@
     {
         "date": "2025-09-10",
         "desc": "Auto rent (Shuttering boxes)",
+        "amt": 300[
+    
+    
+    {
+        "date": "2025-06-09",
+        "desc": "Construction Start",
+        "amt": 0
+    },
+    {
+        "date": "2025-06-13",
+        "desc": "Machine (slope)",
+        "amt": 500
+    },
+    {
+        "date": "2025-06-15",
+        "desc": "Cleaning / Destroying (JCB)",
+        "amt": 1400
+    },
+    {
+        "date": "2025-06-15",
+        "desc": "Pillar gunthalu",
+        "amt": 1200
+    },
+    {
+        "date": "2025-06-16",
+        "desc": "Kankara",
+        "amt": 3000
+    },
+    {
+        "date": "2025-06-17",
+        "desc": "Shikulu",
+        "amt": 43700
+    },
+    {
+        "date": "2025-06-17",
+        "desc": "Dust",
+        "amt": 8600
+    },
+    {
+        "date": "2025-06-17",
+        "desc": "Blade karchu",
+        "amt": 500
+    },
+    {
+        "date": "2025-06-18",
+        "desc": "Kuli",
+        "amt": 4000
+    },
+    {
+        "date": "2025-06-20",
+        "desc": "Sand",
+        "amt": 18600
+    },
+    {
+        "date": "2025-06-20",
+        "desc": "Kirayi (Transport)",
+        "amt": 2500
+    },
+    {
+        "date": "2025-06-20",
+        "desc": "Kankara",
+        "amt": 7800
+    },
+    {
+        "date": "2025-06-20",
+        "desc": "Cement (30 Bags)",
+        "amt": 11050
+    },
+    {
+        "date": "2025-06-20",
+        "desc": "miller members",
+        "amt": 7400
+    },
+    {
+        "date": "2025-06-21",
+        "desc": "Labour",
+        "amt": 2000
+    },
+    {
+        "date": "2025-06-22",
+        "desc": "Suntring meshtri",
+        "amt": 500
+    },
+    {
+        "date": "2025-06-28",
+        "desc": "Suntring box (column box)",
+        "amt": 1400
+    },
+    
+    {
+        "date": "2025-07-10",
+        "desc": "Cement",
+        "amt": 3000
+    },
+    {
+        "date": "2025-07-11",
+        "desc": "Bhendhadi",
+        "amt": 2700
+    },
+    {
+        "date": "2025-07-12",
+        "desc": "Granate",
+        "amt": 11000
+    },
+    {
+        "date": "2025-07-12",
+        "desc": "Labour fee",
+        "amt": 2000
+    },
+    {
+        "date": "2025-07-20",
+        "desc": "Cement - basement",
+        "amt": 2700
+    },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    {
+        "date": "2025-07-28",
+        "desc": "Labour fee (Concrete Bheemulu)",
+        "amt": 2000
+    },
+    {
+        "date": "2025-07-28",
+        "desc": "Cement",
+        "amt": 4000
+    },
+    {
+        "date": "2025-07-31",
+        "desc": "Mud filling (Labour fee)",
+        "amt": 1100
+    },
+    {
+        "date": "2025-07-31",
+        "desc": "Mud",
+        "amt": 5200
+    },
+    {
+        "date": "2025-08-05",
+        "desc": "Soucount chaukalu (Bhajulu)",
+        "amt": 15200
+    },
+    {
+        "date": "2025-08-06",
+        "desc": "Shikulu",
+        "amt": 4000
+    },
+    {
+        "date": "2025-08-06",
+        "desc": "Kankara",
+        "amt": 4000
+    },
+    {
+        "date": "2025-08-12",
+        "desc": "Soucourt (Doors)",
+        "amt": 2200
+    },
+    {
+        "date": "2025-08-12",
+        "desc": "Bed - Labour",
         "amt": 300
+    },
+    {
+        "date": "2025-08-12",
+        "desc": "Cement bed",
+        "amt": 600
+    },
+    {
+        "date": "2025-08-14",
+        "desc": "Pillar (Cement, Labour)",
+        "amt": 7000
+    },
+    {
+        "date": "2025-08-17",
+        "desc": "Tank",
+        "amt": 10000
+    },
+    {
+        "date": "2025-08-17",
+        "desc": "Motor",
+        "amt": 3300
+    },
+    {
+        "date": "2025-08-17",
+        "desc": "Extra things",
+        "amt": 200
+    },
+    {
+        "date": "2025-08-18",
+        "desc": "Bricks",
+        "amt": 18000
+    },
+    {
+        "date": "2025-08-18",
+        "desc": "Bathkha",
+        "amt": 50
+    },
+    {
+        "date": "2025-08-19",
+        "desc": "Labour wage",
+        "amt": 1100
+    },
+    {
+        "date": "2025-08-20",
+        "desc": "Chaukhat requirements",
+        "amt": 200
+    },
+    {
+        "date": "2025-08-21",
+        "desc": "Labour wage",
+        "amt": 500
+    },
+    {
+        "date": "2025-08-24",
+        "desc": "Bricks (7.30 per one)",
+        "amt": 51000
+    },
+    {
+        "date": "2025-08-24",
+        "desc": "Cement",
+        "amt": 2700
+    },
+
+
+
+
+
+
+
+    {
+        "date": "2025-09-10",
+        "desc": "Auto rent (Shuttering boxes)",
+        "amt": 300
+    },
+    {
+        "date": "2025-09-11",
+        "desc": "Shuttering wage",
+        "amt": 1500
+    },
+    {
+        "date": "2025-09-11",
+        "desc": "Cover",
+        "amt": 250
+    },
+    {
+        "date": "2025-09-11",
+        "desc": "Nails",
+        "amt": 75
+    },
+    {
+        "date": "2025-09-18",
+        "desc": "Cement",
+        "amt": 4070
+    },
+    {
+        "date": "2025-09-20",
+        "desc": "Chaukhat holders",
+        "amt": 200
+    },
+    {
+        "date": "2025-09-21",
+        "desc": "Auto rent",
+        "amt": 100
+    },
+    {
+        "date": "2025-11-01",
+        "desc": "Nails, Binding wire",
+        "amt": 11600
+    },
+    {
+        "date": "2025-11-01",
+        "desc": "Auto rent",
+        "amt": 600
+    },
+    {
+        "date": "2025-11-02",
+        "desc": "Shuttering",
+        "amt": 20000
+    },
+    {
+        "date": "2025-11-05",
+        "desc": "Rods & slab requirements",
+        "amt": 57450
+    },
+    {
+        "date": "2025-11-05",
+        "desc": "Sticks & Auto rent",
+        "amt": 2300
+    },
+    {
+        "date": "2025-11-08",
+        "desc": "Shuttering",
+        "amt": 10000
+    },
+    {
+        "date": "2025-11-10",
+        "desc": "Cement advance for slab",
+        "amt": 10000
+    },
+    {
+        "date": "2025-11-10",
+        "desc": "Previous cement",
+        "amt": 300
+    },
+    {
+        "date": "2025-11-11",
+        "desc": "Sand",
+        "amt": 41000
+    },
+    {
+        "date": "2025-11-12",
+        "desc": "Cement (70 bags / 60 bags used)",
+        "amt": 11750
+    },
+    {
+        "date": "2025-11-13",
+        "desc": "Mixer (Miller)",
+        "amt": 13300
+    },
+    {
+        "date": "2025-11-13",
+        "desc": "Pipes",
+        "amt": 3100
+    },
+    {
+        "date": "2025-11-13",
+        "desc": "Expenses",
+        "amt": 1500
+    },
+    {
+        "date": "2025-11-16",
+        "desc": "Shuttering",
+        "amt": 10000
+    }
+
+]
     },
     {
         "date": "2025-09-11",
