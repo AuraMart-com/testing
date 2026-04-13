@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Balraj's Construction Logs</title>
@@ -10,64 +9,75 @@
         :root { --bg: #050508; --card: #11111a; --primary: #00f3ff; --accent: #ff00ff; --text: #e0e0e0; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         .container { max-width: 900px; margin: 0 auto; padding-top: 60px; }
-        .add-btn { position: fixed; top: 15px; right: 15px; width: 50px; height: 50px; background: var(--accent); color: white; border: none; border-radius: 12px; font-size: 28px; cursor: pointer; z-index: 1000; }
+        
+        /* Fixed Header for Buttons */
+        .header-actions { position: fixed; top: 15px; right: 15px; z-index: 1000; display: flex; align-items: center; gap: 10px; }
+        
+        .add-btn { width: 50px; height: 50px; background: var(--accent); color: white; border: none; border-radius: 12px; font-size: 28px; cursor: pointer; }
+        
+        .btn-gov { background: #00d4ff; color: #000; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; height: 40px; display: flex; align-items: center; }
+
+        /* Unified Modal System */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-content { background: var(--card); padding: 30px; border-radius: 15px; text-align: center; width: 85%; }
-        .gw-option { display: block; width: 100%; padding: 15px; margin: 10px 0; background: #1a1a24; color: white; border: 1px solid var(--primary); border-radius: 8px; text-decoration: none; }
+        .modal-content { background: var(--card); padding: 25px; border-radius: 15px; text-align: center; width: 85%; max-width: 500px; border: 1px solid var(--primary); position: relative; }
+        
+        .close { position: absolute; top: 10px; right: 15px; color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .gw-option { display: block; width: 100%; padding: 15px; margin: 10px 0; background: #1a1a24; color: white; border: 1px solid var(--primary); border-radius: 8px; text-decoration: none; box-sizing: border-box; }
+        
         .stats-card { background: var(--card); padding: 20px; border-radius: 12px; border-left: 5px solid var(--primary); margin-bottom: 20px; }
         .controls { display: grid; gap: 15px; margin-bottom: 20px; }
         input, select { background: #1a1a24; border: 1px solid #333; color: white; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; }
+        
+        /* Table Responsive Styles */
         .table-wrapper { overflow-x: auto; background: var(--card); border-radius: 12px; }
-        /* Force the table to fit the screen */
-        table {
-            width: 100%;
-            table-layout: fixed; /* Crucial for fixing column widths */
-            border-collapse: collapse;
-        }
+        table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #222; }
         
-        /* Specific column widths for mobile */
-        th:nth-child(1), td:nth-child(1) { width: 12%; text-align: center; } /* S.No */
-        th:nth-child(2), td:nth-child(2) { width: 28%; } /* Date */
-        th:nth-child(3), td:nth-child(3) { width: 40%; } /* Description */
-        th:nth-child(4), td:nth-child(4) { width: 20%; text-align: right; } /* Amount */
-        
-        /* Decrease text size on mobile and prevent wrapping */
+        /* Gov Table Specifics */
+        #govTable { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        #govTable th { border-bottom: 2px solid #333; padding: 10px; color: #00d4ff; text-align: left; }
+        #govTable td { padding: 10px; border-bottom: 1px solid #333; text-align: left; }
+
         @media screen and (max-width: 600px) {
-            table {
-                font-size: 11px; /* Smaller font for mobile */
-            }
-            
-            /* Shrink the Date and S.No columns to the absolute minimum */
-            th:nth-child(1), td:nth-child(1) { width: 10%; } /* S.No */
-            th:nth-child(2), td:nth-child(2) { width: 22%; font-size: 9px; } /* Date (made smaller) */
-
-            /* Increase the Description space and text size */
-            th:nth-child(3), td:nth-child(3) { 
-                width: 50%; 
-                font-size: 13px; /* This makes it stand out */
-                font-weight: 500;
-                white-space: normal; /* Allows wrapping so nothing is hidden */
-                color: #fff; 
-            }
-        
-            th:nth-child(4), td:nth-child(4) { width: 18%; } /* Amount */
-
-            td, th {
-                padding: 6px 2px; /* Tighten padding further */
-            }
+            table { font-size: 11px; }
+            th:nth-child(1), td:nth-child(1) { width: 10%; }
+            th:nth-child(2), td:nth-child(2) { width: 22%; font-size: 9px; }
+            th:nth-child(3), td:nth-child(3) { width: 50%; font-size: 13px; font-weight: 500; white-space: normal; color: #fff; }
+            th:nth-child(4), td:nth-child(4) { width: 18%; }
+            td, th { padding: 6px 2px; }
         }
     </style>
 </head>
 <body>
 
-    <button class="add-btn" onclick="toggleModal(true)">+</button>
+    <div class="header-actions">
+        <button class="btn-gov" onclick="openGovModal()">🏛️ Gov Funds</button>
+        <button class="add-btn" onclick="toggleGatewayModal(true)">+</button>
+    </div>
 
     <div id="gatewayModal" class="modal">
         <div class="modal-content">
             <h3>Select Gateway</h3>
-            <a href="http://10.18.34.222:8080" class="gw-option">Balraj </a>
-            <a href="http://192.168.43.222:8080" class="gw-option">Debora </a>
-            <button onclick="toggleModal(false)" style="color: #555; background:none; border:none; margin-top:10px;">Close</button>
+            <a href="http://10.18.34.222:8080" class="gw-option">Balraj</a>
+            <a href="http://192.168.43.222:8080" class="gw-option">Debora</a>
+            <button onclick="toggleGatewayModal(false)" style="color: #888; background:none; border:none; margin-top:15px; cursor:pointer;">Close</button>
+        </div>
+    </div>
+
+    <div id="govModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeGovModal()">&times;</span>
+            <h2 style="color: #00d4ff; margin-top: 0; font-size: 18px;">🏛️ Government Funded Bills</h2>
+            <table id="govTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="govDataBody"></tbody>
+            </table>
         </div>
     </div>
 
@@ -78,10 +88,10 @@
         </div>
 
         <div class="controls">
-            <input type="text" id="search" placeholder="Search..." oninput="filterData()">
+            <input type="text" id="search" placeholder="Search logs..." oninput="filterData()">
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div><small>From</small><input type="date" id="start-date" value="" onchange="filterData()"></div>
-                <div><small>To</small><input type="date" id="end-date" value="" onchange="filterData()"></div>
+                <div><small>From</small><input type="date" id="start-date" onchange="filterData()"></div>
+                <div><small>To</small><input type="date" id="end-date" onchange="filterData()"></div>
             </div>
             <select id="sort-main" onchange="filterData()">
                 <option value="newest">Date: Newest to Oldest</option>
@@ -104,18 +114,43 @@
     <script>
         let allData = [];
 
+        // --- DATA FOR GOVERNMENT BILLS (Add more here) ---
+        const govBills = [
+            { date: "23-07-2025", desc: "1st bill", amt: "₹1,00,000" }
+        ];
+
         async function init() {
             try {
                 const res = await fetch('data.json');
                 allData = await res.json();
                 filterData();
-            } catch (e) { console.error("Data load failed"); }
+            } catch (e) { 
+                console.error("Data load failed");
+                document.getElementById('table-body').innerHTML = "<tr><td colspan='4'>Failed to load data.json</td></tr>";
+            }
         }
 
-        function toggleModal(s) { document.getElementById('gatewayModal').style.display = s ? 'flex' : 'none'; }
+        function toggleGatewayModal(s) { 
+            document.getElementById('gatewayModal').style.display = s ? 'flex' : 'none'; 
+        }
 
-        // Formats YYYY-MM-DD to DD-MM-YYYY
+        function openGovModal() {
+            const tbody = document.getElementById('govDataBody');
+            tbody.innerHTML = govBills.map(bill => `
+                <tr>
+                    <td>${bill.date}</td>
+                    <td>${bill.desc}</td>
+                    <td style="color:#00ff88; font-weight:bold;">${bill.amt}</td>
+                </tr>`).join('');
+            document.getElementById("govModal").style.display = "flex";
+        }
+
+        function closeGovModal() {
+            document.getElementById("govModal").style.display = "none";
+        }
+
         function fmtDate(dStr) {
+            if(!dStr.includes('-')) return dStr;
             const [y, m, d] = dStr.split('-');
             return `${d}-${m}-${y}`;
         }
@@ -157,6 +192,14 @@
 
             renderTable(f);
         }
+
+        // Close modals if clicking outside content box
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = "none";
+            }
+        }
+
         init();
     </script>
 </body>
