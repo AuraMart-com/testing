@@ -3,23 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jash Web App</title>
+    <title>CyBi Hub | Access Control</title>
     <style>
-        h2{
-            text-align: center;
-            color: rgb(199, 199, 51);
+        :root {
+            --bg-color: #0d1117;
+            --surface-color: #161b22;
+            --accent-color: #58a6ff;
+            --success-color: #238636;
+            --error-color: #da3633;
+            --text-color: #c9d1d9;
+            --border-color: #30363d;
         }
-        p {
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .auth-container {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        .terminal-header {
+            font-family: monospace;
+            color: var(--accent-color);
+            margin-bottom: 25px;
             text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: #8b949e;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--success-color);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: filter 0.2s;
+        }
+
+        button:hover {
+            filter: brightness(1.1);
+        }
+
+        .toggle-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #8b949e;
+        }
+
+        .toggle-link span {
+            color: var(--accent-color);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .hidden {
+            display: none;
         }
     </style>
-    
-    
 </head>
 <body>
-    <h2>Application Under Progress.....</h2>
-    <p>You will be informed by JASH after it will be ready .</p>
-    
-   
+
+    <div class="auth-container">
+        <div class="terminal-header">AUTHENTICATION_REQUIRED //</div>
+        
+        <div id="loginSection">
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>OPERATOR EMAIL</label>
+                    <input type="email" id="loginEmail" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label>SECURE KEYPASS</label>
+                    <input type="password" id="loginPassword" required autocomplete="current-password">
+                </div>
+                <button type="submit">INITIALIZE LOGIN</button>
+            </form>
+            <div class="toggle-link">
+                New agent? <span onclick="toggleAuth()">Create Profile</span>
+            </div>
+        </div>
+
+        <div id="signupSection" class="hidden">
+            <form id="signupForm">
+                <div class="form-group">
+                    <label>NEW OPERATOR EMAIL</label>
+                    <input type="email" id="signupEmail" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label>CREATE KEYPASS</label>
+                    <input type="password" id="signupPassword" required autocomplete="new-password">
+                </div>
+                <button type="submit" style="background-color: var(--accent-color);">REGISTER IDENTITY</button>
+            </form>
+            <div class="toggle-link">
+                Existing operational agent? <span onclick="toggleAuth()">Initialize Login</span>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+        // PASTE YOUR FIREBASE CONFIG OBJECT HERE
+        const firebaseConfig = {
+            apiKey: "AIzaSyCac-xCRt-eUgz8YmQ4WUUi9PBY92vQIXc",
+            authDomain: "blynexnews.firebaseapp.com",
+            projectId: "blynexnews",
+            storageBucket: "blynexnews.firebasestorage.app",
+            messagingSenderId: "189868652405",
+            appId: "1:189868652405:web:784c3e20a8d849d0cf053c",
+            measurementId: "G-XXZ197R77F"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // UI Toggle logic
+        window.toggleAuth = function() {
+            document.getElementById('loginSection').classList.toggle('hidden');
+            document.getElementById('signupSection').classList.toggle('hidden');
+        }
+
+        // SIGN UP PROCESS
+        document.getElementById("signupForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const email = document.getElementById("signupEmail").value;
+            const password = document.getElementById("signupPassword").value;
+
+            createUserWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    alert("Account Created! Redirecting to hub...");
+                    window.location.href = "dashboard.html";
+                })
+                .catch((error) => { alert("Error: " + error.message); });
+        });
+
+        // LOGIN PROCESS
+        document.getElementById("loginForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const email = document.getElementById("loginEmail").value;
+            const password = document.getElementById("loginPassword").value;
+
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    window.location.href = "dashboard.html";
+                })
+                .catch((error) => { alert("Access Denied: " + error.message); });
+        });
+    </script>
 </body>
 </html>
