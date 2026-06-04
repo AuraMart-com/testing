@@ -128,10 +128,12 @@
                     <input type="password" id="loginPassword" required autocomplete="current-password">
                 </div>
                 <button type="submit">INITIALIZE LOGIN</button>
-                <button type="button" onclick="initializeGoogleLogin()" style="background-color: #4285f4; margin-top: 12px;">
-                    SIGN IN WITH GOOGLE
-                </button>
             </form>
+
+            <button type="button" onclick="initializeGoogleLogin()" style="background-color: #4285f4; margin-top: 12px;">
+                SIGN IN WITH GOOGLE
+            </button>
+
             <div class="toggle-link">
                 New agent? <span onclick="toggleAuth()">Create Profile</span>
             </div>
@@ -191,15 +193,14 @@
 
         // GOOGLE SIGN-IN PROCESS
         window.initializeGoogleLogin = function() {
-            // Force persistence to LocalStorage so the browser saves credentials
             setPersistence(auth, browserLocalPersistence)
                 .then(() => {
-                    // Open the secure Google login popup window
                     return signInWithPopup(auth, googleProvider);
                 })
                 .then((result) => {
                     console.log("Google authentication verified:", result.user.email);
-                    window.location.href = "dashboard.html";
+                    // Standard location execution to prevent tab freezing
+                    window.location.replace("dashboard.html");
                 })
                 .catch((error) => {
                     console.error("Google Auth Failure:", error);
@@ -219,7 +220,7 @@
                 })
                 .then((userCredential) => {
                     alert("Account Created! Redirecting to hub...");
-                    window.location.href = "dashboard.html";
+                    window.location.replace("dashboard.html");
                 })
                 .catch((error) => { alert("Error: " + error.message); });
         });
@@ -235,7 +236,7 @@
                     return signInWithEmailAndPassword(auth, email, password);
                 })
                 .then((userCredential) => {
-                    window.location.href = "dashboard.html";
+                    window.location.replace("dashboard.html");
                 })
                 .catch((error) => { alert("Access Denied: " + error.message); });
         });
