@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CyBi Hub | Access Control</title>
+    
     <style>
         :root {
             --bg-color: #0d1117;
@@ -153,7 +154,13 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { 
+            getAuth, 
+            setPersistence, 
+            browserLocalPersistence, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword 
+        } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
         // PASTE YOUR FIREBASE CONFIG OBJECT HERE
         const firebaseConfig = {
@@ -181,7 +188,11 @@
             const email = document.getElementById("signupEmail").value;
             const password = document.getElementById("signupPassword").value;
 
-            createUserWithEmailAndPassword(auth, email, password)
+            // Commit credentials to storage upon sign up
+            setPersistence(auth, browserLocalPersistence)
+                .then(() => {
+                    return createUserWithEmailAndPassword(auth, email, password);
+                })
                 .then((userCredential) => {
                     alert("Account Created! Redirecting to hub...");
                     window.location.href = "dashboard.html";
@@ -189,13 +200,18 @@
                 .catch((error) => { alert("Error: " + error.message); });
         });
 
-        // LOGIN PROCESS
+        // LOGIN PROCESS - WITH PERSISTENCE ENFORCED
         document.getElementById("loginForm").addEventListener("submit", (e) => {
             e.preventDefault();
             const email = document.getElementById("loginEmail").value;
             const password = document.getElementById("loginPassword").value;
 
-            signInWithEmailAndPassword(auth, email, password)
+            // 1. Command the browser engine to hold this profile key in LocalStorage
+            setPersistence(auth, browserLocalPersistence)
+                .then(() => {
+                    // 2. Run the authentication sequence now that memory paths are fixed
+                    return signInWithEmailAndPassword(auth, email, password);
+                })
                 .then((userCredential) => {
                     window.location.href = "dashboard.html";
                 })
