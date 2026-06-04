@@ -128,6 +128,9 @@
                     <input type="password" id="loginPassword" required autocomplete="current-password">
                 </div>
                 <button type="submit">INITIALIZE LOGIN</button>
+                <button type="button" onclick="initializeGoogleLogin()" style="background-color: #4285f4; margin-top: 12px;">
+                    SIGN IN WITH GOOGLE
+                </button>
             </form>
             <div class="toggle-link">
                 New agent? <span onclick="toggleAuth()">Create Profile</span>
@@ -159,10 +162,12 @@
             setPersistence, 
             browserLocalPersistence, 
             createUserWithEmailAndPassword, 
-            signInWithEmailAndPassword 
+            signInWithEmailAndPassword,
+            GoogleAuthProvider,
+            signInWithPopup 
         } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-        // PASTE YOUR FIREBASE CONFIG OBJECT HERE
+        // Your Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCac-xCRt-eUgz8YmQ4WUUi9PBY92vQIXc",
             authDomain: "blynexnews.firebaseapp.com",
@@ -173,13 +178,33 @@
             measurementId: "G-XXZ197R77F"
         };
 
+        // Initialize Firebase and Auth
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const googleProvider = new GoogleAuthProvider();
 
         // UI Toggle logic
         window.toggleAuth = function() {
             document.getElementById('loginSection').classList.toggle('hidden');
             document.getElementById('signupSection').classList.toggle('hidden');
+        }
+
+        // GOOGLE SIGN-IN PROCESS
+        window.initializeGoogleLogin = function() {
+            // Force persistence to LocalStorage so the browser saves credentials
+            setPersistence(auth, browserLocalPersistence)
+                .then(() => {
+                    // Open the secure Google login popup window
+                    return signInWithPopup(auth, googleProvider);
+                })
+                .then((result) => {
+                    console.log("Google authentication verified:", result.user.email);
+                    window.location.href = "dashboard.html";
+                })
+                .catch((error) => {
+                    console.error("Google Auth Failure:", error);
+                    alert("Google Login Failed: " + error.message);
+                });
         }
 
         // SIGN UP PROCESS
@@ -188,7 +213,6 @@
             const email = document.getElementById("signupEmail").value;
             const password = document.getElementById("signupPassword").value;
 
-            // Commit credentials to storage upon sign up
             setPersistence(auth, browserLocalPersistence)
                 .then(() => {
                     return createUserWithEmailAndPassword(auth, email, password);
@@ -200,16 +224,14 @@
                 .catch((error) => { alert("Error: " + error.message); });
         });
 
-        // LOGIN PROCESS - WITH PERSISTENCE ENFORCED
+        // EMAIL/PASSWORD LOGIN PROCESS
         document.getElementById("loginForm").addEventListener("submit", (e) => {
             e.preventDefault();
             const email = document.getElementById("loginEmail").value;
             const password = document.getElementById("loginPassword").value;
 
-            // 1. Command the browser engine to hold this profile key in LocalStorage
             setPersistence(auth, browserLocalPersistence)
                 .then(() => {
-                    // 2. Run the authentication sequence now that memory paths are fixed
                     return signInWithEmailAndPassword(auth, email, password);
                 })
                 .then((userCredential) => {
