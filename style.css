@@ -57,15 +57,144 @@
             background-color: var(--success);
             color: white;
             border: none;
-            padding: 0 24px;
-            font-size: 1rem;
+            padding: 16px 24px;
+            font-size: 1.1rem;
             font-weight: bold;
             border-radius: 6px;
             cursor: pointer;
             transition: filter 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .add-btn:hover { filter: brightness(1.1); }
+
+        /* Dropdown custom positioning */
+        .dropdown-wrapper {
+            position: relative;
+            display: flex;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            display: none;
+            flex-direction: column;
+            width: 180px;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            overflow: hidden;
+        }
+
+        .dropdown-menu.active {
+            display: flex;
+        }
+
+        .dropdown-menu button {
+            background: transparent;
+            border: none;
+            color: var(--text);
+            padding: 14px 16px;
+            text-align: left;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 0.95rem;
+            width: 100%;
+            transition: background 0.2s, color 0.1s;
+        }
+
+        .dropdown-menu button:hover {
+            background-color: var(--border);
+            color: var(--accent);
+        }
+
+        /* Breadcrumbs navigation */
+        .breadcrumbs-container {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 14px;
+        }
+
+        .breadcrumb-item {
+            color: var(--accent);
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .breadcrumb-item:hover {
+            text-decoration: underline;
+            color: var(--text);
+        }
+
+        .breadcrumb-separator {
+            color: var(--border);
+            font-weight: normal;
+        }
+
+        .breadcrumb-current {
+            color: var(--text);
+            font-weight: bold;
+        }
+
+        /* Folders Grid layout & cards */
+        .folder-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .folder-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+        }
+
+        .folder-icon {
+            font-size: 2.2rem;
+            line-height: 1;
+        }
+
+        .folder-meta {
+            flex: 1;
+        }
+
+        .folder-meta h3 {
+            color: var(--text);
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .folder-meta p {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Files layout tweak */
+        .file-icon {
+            font-size: 2.2rem;
+            line-height: 1;
+            margin-right: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
         .grid-output {
             display: flex;
@@ -155,4 +284,82 @@
         .cancel-btn { background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); padding: 10px 16px; border-radius: 4px; cursor: pointer; }
         .submit-btn { background: var(--accent); border: none; color: var(--bg); padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .submit-btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+
+        /* Navigation Control Panel Styles */
+        .nav-control-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-panel-title {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        .nav-control-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn-icon {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            width: 38px;
+            height: 38px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            outline: none;
+        }
+
+        .nav-btn-icon svg {
+            width: 18px;
+            height: 18px;
+            stroke-width: 2px;
+            pointer-events: none;
+        }
+
+        .nav-btn-icon:hover:not(:disabled) {
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .nav-btn-icon:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        .nav-btn-icon:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            background-color: transparent;
+            border-color: var(--border);
+            color: var(--text-muted);
+            box-shadow: none;
+            transform: none;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .nav-btn-icon.loading svg {
+            animation: spin 0.8s linear infinite;
+            color: var(--accent);
+        }
+
    

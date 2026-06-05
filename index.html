@@ -2,10 +2,94 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=https://auramart-com.github.io/docs-by-studio/" />
-    <title>Redirecting...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SECURE://DOCS_VAULT</title>
+    <link rel="stylesheet" href="style.css">
+    
 </head>
 <body>
-    <p>If you are not redirected automatically, <a href="https://auramart-com.github.io/docs-by-studio/">click here</a>.</p>
+
+    <div class="vault-wrapper">
+        <header>
+            <h2>SECURE_DOCUMENT_VAULT // AGENT_WORKSPACE</h2>
+        </header>
+
+        <div class="action-row">
+            <input type="text" id="searchBox" class="search-engine" placeholder="Connecting to cloud registry synchronization loop..." disabled>
+            <div class="dropdown-wrapper">
+                <button class="add-btn" id="addBtn" onclick="toggleDropdown(event)">+</button>
+                <div class="dropdown-menu" id="addDropdown">
+                    <button onclick="triggerNewFile(event)">📄 New File</button>
+                    <button onclick="triggerNewFolder(event)">📁 New Folder</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="breadcrumbs-container" id="breadcrumbs"></div>
+
+        <div class="nav-control-panel" id="navControlPanel">
+            <span class="control-panel-title">DIRECTORY_NAVIGATION</span>
+            <div class="nav-control-buttons">
+                <button id="navHomeBtn" class="nav-btn-icon" title="Go to Root Folder" onclick="navigateHome()" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                </button>
+                <button id="navBackBtn" class="nav-btn-icon" title="Go Back One Folder" onclick="navigateBack()" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                </button>
+                <button id="navRefreshBtn" class="nav-btn-icon" title="Force Cloud Sync" onclick="refreshDatabase()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <main id="vaultGrid" class="grid-output"></main>
+    </div> 
+
+    <div id="uploadModal" class="modal-overlay">
+        <div class="modal-window">
+            <h3>SECURE_REPOSITORY_PROVISION //</h3>
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label>TARGET STORAGE FILE</label>
+                    <input type="file" id="fileInput" required>
+                </div>
+                <div class="form-group">
+                    <label>CLASSIFICATION CATEGORY</label>
+                    <select id="fileCategory" required>
+                        <option value="Education">Education </option>
+                        <option value="Identification">Identification </option>
+                        <option value="Admission">College</option>
+                        <option value="Other">Other Miscellaneous Docs</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>OPERATIONAL DESCRIPTION</label>
+                    <textarea id="fileDescription" rows="3" placeholder="Enter file tracking descriptions or contextual metadata tags..." required></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeModal()">ABORT</button>
+                    <button type="submit" id="submitBtn" class="submit-btn">EXECUTE UPLOAD</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="folderModal" class="modal-overlay">
+        <div class="modal-window">
+            <h3>SECURE_FOLDER_PROVISION //</h3>
+            <form id="folderForm">
+                <div class="form-group">
+                    <label>FOLDER NAME</label>
+                    <input type="text" id="folderNameInput" placeholder="Enter custom folder name..." required autocomplete="off">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeFolderModal()">ABORT</button>
+                    <button type="submit" class="submit-btn" id="submitFolderBtn">PROVISION FOLDER</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
