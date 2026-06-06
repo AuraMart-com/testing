@@ -512,43 +512,22 @@
             renderVault();
         }
 
-        // 2. Form submission and Base64 conversion logic
-        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const submitBtn = document.getElementById('submitBtn');
-            const fileInput = document.getElementById('fileInput');
-            const file = fileInput.files[0];
-            
-            const assetTypeEl = document.getElementById('assetType');
-            const assetType = assetTypeEl ? assetTypeEl.value : (file ? 'File' : 'Folder');
-            
-            if (assetType === 'File' && !file) return;
+        // Isolate the physical network transmission logic to Google Sheets or offline safe storage
+        async function transmitToCloud(payload, buttonElement) {
+            const customName = payload.fileName;
+            const categoryTag = payload.fileCategory;
+            const description = payload.fileDescription || document.getElementById('fileDescription').value;
+            const folderPath = document.getElementById('fileCategory').value;
+            const isFolder = payload.fileBase64 === 'EMPTY_FOLDER';
 
-            const customName = document.getElementById('fileNameInput').value.trim() || (file ? file.name : "New Folder");
-            const categoryTag = document.getElementById('fileCategoryTagInput').value.trim() || (assetType === 'Folder' ? "Folder" : "Other");
-            const folderPath = document.getElementById('fileCategory').value; // represents folder location path from directory state
-            const description = document.getElementById('fileDescription').value;
+            // Store folder location map in advance so it syncs up nicely on refresh
+            try {
+                let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
+                sheetFolderMap[customName] = folderPath;
+                localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
+            } catch (e) {}
 
-            submitBtn.disabled = true;
-            submitBtn.innerText = "CONVERTING & TRANSMITTING...";
-
-            if (assetType === 'Folder') {
-                const payload = {
-                    fileName: customName,
-                    fileType: 'application/x-folder',
-                    fileCategory: categoryTag, // Written to the 'category' sheet column
-                    fileDescription: description,
-                    fileBase64: 'DIRECTORY_ENTRY'
-                };
-
-                // Store folder location map in advance so it syncs up nicely on refresh
-                try {
-                    let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
-                    sheetFolderMap[customName] = folderPath;
-                    localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
-                } catch (e) {}
-
+            if (isFolder) {
                 // Register empty folder locally to display it immediately
                 try {
                     const fullPathStr = folderPath ? `${folderPath}/${customName}` : customName;
@@ -558,34 +537,40 @@
                         localStorage.setItem("vault_custom_empty_folders", JSON.stringify(emptyFolders));
                     }
                 } catch (e) {}
+            }
 
-                try {
-                    if (!BACKEND_API_URL || BACKEND_API_URL.startsWith("PASTE_")) {
-                        throw new Error("Apps Script URL unconfigured");
+            try {
+                if (!BACKEND_API_URL || BACKEND_API_URL.startsWith("PASTE_")) {
+                    throw new Error("Apps Script URL unconfigured");
+                }
+
+                const response = await fetch(BACKEND_API_URL, {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+                const resData = await response.json();
+
+                if (resData.status === "SUCCESS") {
+                    if (resData.id) {
+                        try {
+                            let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
+                            sheetFolderMap[resData.id] = folderPath;
+                            localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
+                        } catch (e) {}
                     }
-
-                    const response = await fetch(BACKEND_API_URL, {
-                        method: "POST",
-                        body: JSON.stringify(payload)
-                    });
-                    const resData = await response.json();
-
-                    if (resData.status === "SUCCESS") {
-                        if (resData.id) {
-                            try {
-                                let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
-                                sheetFolderMap[resData.id] = folderPath;
-                                localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
-                            } catch (e) {}
-                        }
+                    if (isFolder) {
                         alert("Secure fold sync confirmed! Folder registered in sheets database.");
-                        closeModal();
-                        document.getElementById('uploadForm').reset();
-                        fetchDatabase(); // Force interface live reload sync loop
                     } else {
-                        throw new Error(resData.message || "Storage rejected transmission");
+                        alert("Secure sync confirmed! Row written to sheet and file deposited in Drive.");
                     }
-                } catch(error) {
+                    closeModal();
+                    document.getElementById('uploadForm').reset();
+                    fetchDatabase(); // Force interface live reload sync loop
+                } else {
+                    throw new Error(resData.message || "Storage rejected transmission");
+                }
+            } catch(error) {
+                if (isFolder) {
                     console.warn("Cloud transmission bypassed. Storing folder locally inside Secured Sandboxed storage:", error);
                     
                     const newId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
@@ -609,12 +594,62 @@
                     closeModal();
                     document.getElementById('uploadForm').reset();
                     renderVault();
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = "EXECUTE UPLOAD";
+                } else {
+                    console.warn("Cloud transmission bypassed. Storing locally inside Secured Sandboxed storage:", error);
+                    
+                    // Save document metadata and physical payload directly into localStorage index
+                    saveLocalUpload(customName, payload.fileType || "application/octet-stream", categoryTag, folderPath, description, payload.fileBase64);
+                    
+                    alert("Local sandbox sync verified! Document successfully indexed and saved to secure offline local storage.");
+                    closeModal();
+                    document.getElementById('uploadForm').reset();
                 }
+            } finally {
+                buttonElement.disabled = false;
+                buttonElement.innerText = "EXECUTE UPLOAD";
+            }
+        }
+
+        // 2. Form submission and Base64 conversion logic
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            const assetTypeEl = document.getElementById('assetType');
+            const assetType = assetTypeEl ? assetTypeEl.value : (file ? 'File' : 'Folder');
+            
+            if (assetType === 'Folder') {
+                const customName = document.getElementById('fileNameInput').value.trim() || "New Folder";
+                const description = document.getElementById('fileDescription').value;
+                const currentFolderId = currentPath.length > 0 ? currentPath[currentPath.length - 1] : "Root";
+
+                const payload = {
+                    fileName: customName,
+                    fileType: 'application/x-folder',
+                    fileCategory: 'Directory',
+                    fileDescription: description,
+                    fileBase64: 'EMPTY_FOLDER',
+                    parentFolder: currentFolderId
+                };
+
+                submitBtn.disabled = true;
+                submitBtn.innerText = "CONVERTING & TRANSMITTING...";
+
+                await transmitToCloud(payload, submitBtn);
             } else {
                 // If assetType is 'File', maintain standard FileReader binary-to-base64 conversion pipeline
+                if (!file) return;
+
+                const customName = document.getElementById('fileNameInput').value.trim() || file.name;
+                const categoryTag = document.getElementById('fileCategoryTagInput').value.trim() || "Other";
+                const description = document.getElementById('fileDescription').value;
+
+                submitBtn.disabled = true;
+                submitBtn.innerText = "CONVERTING & TRANSMITTING...";
+
                 const reader = new FileReader();
                 reader.readAsDataURL(file); // Converts physical binary into base64 url data signature
                 
@@ -629,53 +664,7 @@
                         fileBase64: base64String
                     };
 
-                    // Store folder location map in advance so it syncs up nicely on refresh
-                    try {
-                        let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
-                        sheetFolderMap[customName] = folderPath;
-                        localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
-                    } catch (e) {}
-
-                    try {
-                        if (!BACKEND_API_URL || BACKEND_API_URL.startsWith("PASTE_")) {
-                            throw new Error("Apps Script URL unconfigured");
-                        }
-
-                        const response = await fetch(BACKEND_API_URL, {
-                            method: "POST",
-                            body: JSON.stringify(payload)
-                        });
-                        const resData = await response.json();
-
-                        if (resData.status === "SUCCESS") {
-                            // If response returns ID, save folder mapping under that ID too
-                            if (resData.id) {
-                                try {
-                                    let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
-                                    sheetFolderMap[resData.id] = folderPath;
-                                    localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
-                                } catch (e) {}
-                            }
-                            alert("Secure sync confirmed! Row written to sheet and file deposited in Drive.");
-                            closeModal();
-                            document.getElementById('uploadForm').reset();
-                            fetchDatabase(); // Force interface live reload sync loop
-                        } else {
-                            throw new Error(resData.message || "Storage rejected transmission");
-                        }
-                    } catch(error) {
-                        console.warn("Cloud transmission bypassed. Storing locally inside Secured Sandboxed storage:", error);
-                        
-                        // Save document metadata and physical payload directly into localStorage index
-                        saveLocalUpload(customName, file.type, categoryTag, folderPath, description, base64String);
-                        
-                        alert("Local sandbox sync verified! Document successfully indexed and saved to secure offline local storage.");
-                        closeModal();
-                        document.getElementById('uploadForm').reset();
-                    } finally {
-                        submitBtn.disabled = false;
-                        submitBtn.innerText = "EXECUTE UPLOAD";
-                    }
+                    await transmitToCloud(payload, submitBtn);
                 };
             }
         });
