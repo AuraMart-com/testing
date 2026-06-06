@@ -285,6 +285,41 @@
         .submit-btn { background: var(--accent); border: none; color: var(--bg); padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .submit-btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
 
+        /* Universal Web Control Bar Styles */
+        .web-control-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .web-control-btn {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 8px 14px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            font-family: inherit;
+            font-weight: bold;
+        }
+
+        .web-control-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.15);
+            transform: translateY(-0.5px);
+        }
+
+        .web-control-btn:active {
+            transform: translateY(0.5px);
+        }
+
         /* Navigation Control Panel Styles */
         .nav-control-panel {
             display: flex;
@@ -362,4 +397,184 @@
             color: var(--accent);
         }
 
-   
+        /* Sync status indicator badge styling */
+        .sync-status {
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .sync-status.online {
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.4);
+            background-color: rgba(16, 185, 129, 0.05);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+        }
+
+        .sync-status.offline {
+            color: #f97316;
+            border-color: rgba(249, 115, 22, 0.4);
+            background-color: rgba(249, 115, 22, 0.05);
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.15);
+        }
+
+        /* Enhanced Interactive Cards with Context Options */
+        .doc-card {
+            position: relative;
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .doc-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+        }
+
+        .folder-card {
+            position: relative;
+        }
+
+        .card-options-container {
+            position: relative;
+            margin-left: 14px;
+            display: inline-block;
+            z-index: 10;
+        }
+
+        .card-options-btn {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            outline: none;
+        }
+
+        .card-options-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2px;
+            pointer-events: none;
+        }
+
+        .card-options-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+            transform: translateY(-0.5px);
+        }
+
+        .card-options-btn:active {
+            transform: translateY(0.5px);
+        }
+
+        .options-dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 36px;
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            min-width: 156px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+            z-index: 999;
+            font-family: inherit;
+        }
+
+        .options-dropdown-menu.active {
+            display: block;
+        }
+
+        .options-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 10px 14px;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .options-dropdown-item:hover {
+            background-color: rgba(56, 189, 248, 0.1);
+            color: var(--accent);
+        }
+
+        .options-dropdown-item.delete-item {
+            color: #f87171;
+            border-top: 1px dashed var(--border);
+        }
+        
+        .options-dropdown-item.delete-item:hover {
+            background-color: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+        }
+
+        /* Metadata Details Layout */
+        .details-body {
+            margin: 18px 0;
+            font-size: 0.9rem;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .details-row {
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 10px;
+        }
+
+        .details-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .details-key {
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            width: 120px;
+            font-weight: bold;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .details-val {
+            flex: 1;
+            word-break: break-all;
+            color: var(--text);
+        }
+
