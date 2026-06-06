@@ -88,53 +88,69 @@
 
         // Lightweight safe row splitter
         function parseCSV(text) {
-            const lines = text.split("\n");
-            if (lines.length < 1) return;
-            const headers = lines[0].split(",").map(h => h.trim().replace(/["']/g, ""));
+            const results = [];
+            let row = [];
+            let cell = "";
+            let inQuotes = false;
+            
+            const len = text.length;
+            for (let i = 0; i < len; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1];
+                
+                if (char === '"' || char === "'") {
+                    if (inQuotes && nextChar === char) {
+                        cell += char;
+                        i++; // Skip escape quote
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    row.push(cell);
+                    cell = "";
+                } else if ((char === '\r' || char === '\n') && !inQuotes) {
+                    if (char === '\r' && nextChar === '\n') {
+                        i++; // Skip LF
+                    }
+                    row.push(cell);
+                    results.push(row);
+                    row = [];
+                    cell = "";
+                } else {
+                    cell += char;
+                }
+            }
+            if (cell || row.length > 0) {
+                row.push(cell);
+                results.push(row);
+            }
+            
+            if (results.length < 1) return;
+            
+            const headers = results[0].map(h => h.trim().replace(/^["']|["']$/g, ""));
             documentInventory = [];
-
-            // Read the folder paths mapped locally for sheets files
+            
             let sheetFolderMap = {};
             try {
                 sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
             } catch (e) {
                 sheetFolderMap = {};
             }
-
-            for (let i = 1; i < lines.length; i++) {
-                if (!lines[i].trim()) continue;
-                // Simple CSV line splitter, keeping splits inside quotes safe
-                const currentLine = parseCSVLine(lines[i]);
+            
+            for (let i = 1; i < results.length; i++) {
+                const currentLine = results[i];
+                if (currentLine.length === 0 || (currentLine.length === 1 && !currentLine[0].trim())) continue;
+                
                 const obj = {};
                 headers.forEach((header, idx) => {
                     let value = currentLine[idx] ? currentLine[idx].trim() : "";
-                    obj[header] = value.replace(/^["']|["']$/g, ""); // Clean string bounds
+                    obj[header] = value;
                 });
                 
                 // Map to its local folder structure, defaulting to Root
                 obj.folderPath = sheetFolderMap[obj.id] || "";
                 documentInventory.push(obj);
             }
-        }
-
-        // Safer CSV cell splitter that handles commas inside quotes (avoiding splitting description commas!)
-        function parseCSVLine(line) {
-            const result = [];
-            let current = "";
-            let inQuotes = false;
-            for (let i = 0; i < line.length; i++) {
-                const char = line[i];
-                if (char === '"' || char === "'") {
-                    inQuotes = !inQuotes;
-                } else if (char === ',' && !inQuotes) {
-                    result.push(current);
-                    current = "";
-                } else {
-                    current += char;
-                }
-            }
-            result.push(current);
-            return result;
         }
 
         // Directory contents builder
@@ -497,34 +513,33 @@
         }
 
         // 2. Form submission and Base64 conversion logic
-        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const submitBtn = document.getElementById('submitBtn');
             const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
             
-            if (!file) return;
+            const assetTypeEl = document.getElementById('assetType');
+            const assetType = assetTypeEl ? assetTypeEl.value : (file ? 'File' : 'Folder');
+            
+            if (assetType === 'File' && !file) return;
 
-            const customName = document.getElementById('fileNameInput').value.trim() || file.name;
-            const categoryTag = document.getElementById('fileCategoryTagInput').value.trim() || "Other";
+            const customName = document.getElementById('fileNameInput').value.trim() || (file ? file.name : "New Folder");
+            const categoryTag = document.getElementById('fileCategoryTagInput').value.trim() || (assetType === 'Folder' ? "Folder" : "Other");
             const folderPath = document.getElementById('fileCategory').value; // represents folder location path from directory state
+            const description = document.getElementById('fileDescription').value;
 
             submitBtn.disabled = true;
             submitBtn.innerText = "CONVERTING & TRANSMITTING...";
 
-            const reader = new FileReader();
-            reader.readAsDataURL(file); // Converts physical binary into base64 url data signature
-            
-            reader.onload = async function() {
-                const base64String = reader.result.split(',')[1]; // Strip data descriptor header metadata
-                
+            if (assetType === 'Folder') {
                 const payload = {
                     fileName: customName,
-                    fileType: file.type,
+                    fileType: 'application/x-folder',
                     fileCategory: categoryTag, // Written to the 'category' sheet column
-                    fileDescription: document.getElementById('fileDescription').value,
-                    fileBase64: base64String
+                    fileDescription: description,
+                    fileBase64: 'DIRECTORY_ENTRY'
                 };
 
                 // Store folder location map in advance so it syncs up nicely on refresh
@@ -532,6 +547,16 @@
                     let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
                     sheetFolderMap[customName] = folderPath;
                     localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
+                } catch (e) {}
+
+                // Register empty folder locally to display it immediately
+                try {
+                    const fullPathStr = folderPath ? `${folderPath}/${customName}` : customName;
+                    let emptyFolders = JSON.parse(localStorage.getItem("vault_custom_empty_folders")) || [];
+                    if (!emptyFolders.includes(fullPathStr)) {
+                        emptyFolders.push(fullPathStr);
+                        localStorage.setItem("vault_custom_empty_folders", JSON.stringify(emptyFolders));
+                    }
                 } catch (e) {}
 
                 try {
@@ -546,7 +571,6 @@
                     const resData = await response.json();
 
                     if (resData.status === "SUCCESS") {
-                        // If response returns ID, save folder mapping under that ID too
                         if (resData.id) {
                             try {
                                 let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
@@ -554,7 +578,7 @@
                                 localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
                             } catch (e) {}
                         }
-                        alert("Secure sync confirmed! Row written to sheet and file deposited in Drive.");
+                        alert("Secure fold sync confirmed! Folder registered in sheets database.");
                         closeModal();
                         document.getElementById('uploadForm').reset();
                         fetchDatabase(); // Force interface live reload sync loop
@@ -562,19 +586,98 @@
                         throw new Error(resData.message || "Storage rejected transmission");
                     }
                 } catch(error) {
-                    console.warn("Cloud transmission bypassed. Storing locally inside Secured Sandboxed storage:", error);
+                    console.warn("Cloud transmission bypassed. Storing folder locally inside Secured Sandboxed storage:", error);
                     
-                    // Save document metadata and physical payload directly into localStorage index
-                    saveLocalUpload(customName, file.type, categoryTag, folderPath, payload.fileDescription, base64String);
+                    const newId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
+                    const newDoc = {
+                        id: newId,
+                        title: customName,
+                        category: categoryTag,
+                        folderPath: folderPath,
+                        description: description,
+                        driveLink: "javascript:void(0)"
+                    };
                     
-                    alert("Local sandbox sync verified! Document successfully indexed and saved to secure offline local storage.");
+                    let localUploads = [];
+                    try {
+                        localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
+                    } catch(e) {}
+                    localUploads.push(newDoc);
+                    localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+                    
+                    alert("Local sandbox sync verified! Folder successfully indexed and saved to secure offline local storage.");
                     closeModal();
                     document.getElementById('uploadForm').reset();
+                    renderVault();
                 } finally {
                     submitBtn.disabled = false;
                     submitBtn.innerText = "EXECUTE UPLOAD";
                 }
-            };
+            } else {
+                // If assetType is 'File', maintain standard FileReader binary-to-base64 conversion pipeline
+                const reader = new FileReader();
+                reader.readAsDataURL(file); // Converts physical binary into base64 url data signature
+                
+                reader.onload = async function() {
+                    const base64String = reader.result.split(',')[1]; // Strip data descriptor header metadata
+                    
+                    const payload = {
+                        fileName: customName,
+                        fileType: file.type,
+                        fileCategory: categoryTag, // Written to the 'category' sheet column
+                        fileDescription: description,
+                        fileBase64: base64String
+                    };
+
+                    // Store folder location map in advance so it syncs up nicely on refresh
+                    try {
+                        let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
+                        sheetFolderMap[customName] = folderPath;
+                        localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
+                    } catch (e) {}
+
+                    try {
+                        if (!BACKEND_API_URL || BACKEND_API_URL.startsWith("PASTE_")) {
+                            throw new Error("Apps Script URL unconfigured");
+                        }
+
+                        const response = await fetch(BACKEND_API_URL, {
+                            method: "POST",
+                            body: JSON.stringify(payload)
+                        });
+                        const resData = await response.json();
+
+                        if (resData.status === "SUCCESS") {
+                            // If response returns ID, save folder mapping under that ID too
+                            if (resData.id) {
+                                try {
+                                    let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
+                                    sheetFolderMap[resData.id] = folderPath;
+                                    localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
+                                } catch (e) {}
+                            }
+                            alert("Secure sync confirmed! Row written to sheet and file deposited in Drive.");
+                            closeModal();
+                            document.getElementById('uploadForm').reset();
+                            fetchDatabase(); // Force interface live reload sync loop
+                        } else {
+                            throw new Error(resData.message || "Storage rejected transmission");
+                        }
+                    } catch(error) {
+                        console.warn("Cloud transmission bypassed. Storing locally inside Secured Sandboxed storage:", error);
+                        
+                        // Save document metadata and physical payload directly into localStorage index
+                        saveLocalUpload(customName, file.type, categoryTag, folderPath, description, base64String);
+                        
+                        alert("Local sandbox sync verified! Document successfully indexed and saved to secure offline local storage.");
+                        closeModal();
+                        document.getElementById('uploadForm').reset();
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "EXECUTE UPLOAD";
+                    }
+                };
+            }
         });
 
         // Folder Modal form submit
@@ -656,27 +759,330 @@
 
         document.getElementById('searchBox').addEventListener('input', (e) => renderVault(e.target.value));
 
-        // Interactive default opener triggers copy display or binary data downloads
-        window.openFileSystemFile = function(driveLink, title) {
-            if (!driveLink) return;
-            if (driveLink.startsWith("javascript:")) {
-                try {
-                    const jsCode = driveLink.substring(11);
-                    new Function(jsCode)();
-                } catch (e) {
-                    console.error("Secured action failure:", e);
+        // Decodes and transforms Google Drive links into embedded preview format URLs
+        function getGoogleDriveEmbedUrl(url) {
+            if (!url) return "";
+            let fileId = "";
+            
+            // Trim any quotes or trailing whitespace
+            const cleanUrl = url.trim().replace(/^["']|["']$/g, "");
+            
+            // 1. Check for /file/d/FILE_ID
+            const fileDMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+            if (fileDMatch && fileDMatch[1]) {
+                fileId = fileDMatch[1];
+            }
+            
+            // 2. Check for id=FILE_ID parameter
+            if (!fileId && cleanUrl.includes("id=")) {
+                const idMatch = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                if (idMatch && idMatch[1]) {
+                    fileId = idMatch[1];
                 }
-            } else if (driveLink.startsWith("data:")) {
+            }
+            
+            // 3. Check for docs/spreadsheets/presentation paths 
+            if (!fileId) {
+                const docMatch = cleanUrl.match(/\/(document|spreadsheets|presentation)\/d\/([a-zA-Z0-9_-]+)/);
+                if (docMatch && docMatch[2]) {
+                    const type = docMatch[1];
+                    const docId = docMatch[2];
+                    return `https://docs.google.com/${type}/d/${docId}/preview`;
+                }
+            }
+            
+            if (fileId) {
+                return `https://drive.google.com/file/d/${fileId}/preview`;
+            }
+            
+            return cleanUrl;
+        }
+
+        // Decodes and transforms Google Drive links into direct download format URLs
+        function getGoogleDriveDownloadUrl(url) {
+            if (!url) return "";
+            let fileId = "";
+            
+            // Trim any quotes or trailing whitespace
+            const cleanUrl = url.trim().replace(/^["']|["']$/g, "");
+            
+            // 1. Check for /file/d/FILE_ID
+            const fileDMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+            if (fileDMatch && fileDMatch[1]) {
+                fileId = fileDMatch[1];
+            }
+            
+            // 2. Check for id=FILE_ID parameter
+            if (!fileId && cleanUrl.includes("id=")) {
+                const idMatch = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                if (idMatch && idMatch[1]) {
+                    fileId = idMatch[1];
+                }
+            }
+            
+            // 3. Check for docs/spreadsheets/presentation paths 
+            if (!fileId) {
+                const docMatch = cleanUrl.match(/\/(document|spreadsheets|presentation)\/d\/([a-zA-Z0-9_-]+)/);
+                if (docMatch && docMatch[2]) {
+                    const type = docMatch[1];
+                    const docId = docMatch[2];
+                    if (type === 'document') {
+                        return `https://docs.google.com/document/d/${docId}/export?format=pdf`;
+                    } else if (type === 'spreadsheets') {
+                        return `https://docs.google.com/spreadsheets/d/${docId}/export?format=xlsx`;
+                    } else if (type === 'presentation') {
+                        return `https://docs.google.com/presentation/d/${docId}/export/pdf`;
+                    }
+                }
+            }
+            
+            if (fileId) {
+                return `https://drive.google.com/uc?export=download&id=${fileId}`;
+            }
+            
+            return cleanUrl;
+        }
+
+        // Core downloader engine that triggers direct download bypassing any navigation/Google Drive tab redirects
+        window.triggerDirectFileDownload = function(driveLink, title) {
+            if (!driveLink) return;
+            const cleanLink = driveLink.trim().replace(/^["']|["']$/g, "");
+            const safeTitle = typeof title === 'string' ? title : (title ? String(title) : "secured_document");
+
+            if (cleanLink.startsWith("data:")) {
                 const link = document.createElement("a");
-                link.href = driveLink;
-                link.download = title || "secured_document";
+                link.href = cleanLink;
+                link.download = safeTitle;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else if (cleanLink.startsWith("javascript:")) {
+                const content = `---- SECURE OFF-LINE SANDBOX EXTRACT ----\nFile: ${safeTitle}\nStatus: DEMO ENCRYPTED`;
+                const link = document.createElement("a");
+                link.href = "data:text/plain;charset=utf-8," + encodeURIComponent(content);
+                link.download = safeTitle.replace(/\.[a-zA-Z0-9]+$/i, "") + "_offline.txt";
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
             } else {
-                window.open(driveLink, "_blank");
+                const downloadUrl = getGoogleDriveDownloadUrl(cleanLink);
+                
+                // Use a silent hidden iframe to force the browser to initiate a direct download in the background
+                // without navigating away, flashing, or opening any blank tabs.
+                const hiddenIframe = document.createElement("iframe");
+                hiddenIframe.style.display = "none";
+                hiddenIframe.src = downloadUrl;
+                document.body.appendChild(hiddenIframe);
+                
+                setTimeout(() => {
+                    if (hiddenIframe.parentNode) {
+                        document.body.removeChild(hiddenIframe);
+                    }
+                }, 5000);
             }
         };
+
+        // Interactive default opener triggers copy display or binary data downloads
+        window.openFileSystemFile = function(driveLink, title) {
+            if (!driveLink) return;
+
+            // Setup download and open tab buttons
+            const downloadBtn = document.getElementById('viewerDownloadBtn');
+            const openTabBtn = document.getElementById('viewerOpenTabBtn');
+            const viewerTitle = document.getElementById('viewerTitle');
+            const viewerBody = document.getElementById('viewerBody');
+
+            const safeTitle = typeof title === 'string' ? title : (title ? String(title) : "SECURE_DOCUMENT");
+
+            if (viewerTitle) {
+                viewerTitle.innerText = `VIEW_FILE // ${safeTitle.toUpperCase()}`;
+            }
+
+            // Set up fallback download / open in new tab events
+            if (downloadBtn) {
+                downloadBtn.onclick = function() {
+                    triggerDirectFileDownload(driveLink, safeTitle);
+                };
+            }
+
+            if (openTabBtn) {
+                openTabBtn.onclick = function() {
+                    const cleanLink = driveLink.trim().replace(/^["']|["']$/g, "");
+                    if (cleanLink.startsWith("javascript:")) {
+                        alert("Secure action script offline. Try regular uploads to link active cloud drives.");
+                    } else {
+                        window.open(cleanLink, "_blank");
+                    }
+                };
+                
+                const cleanLink = driveLink.trim().replace(/^["']|["']$/g, "");
+                if (cleanLink.startsWith("data:")) {
+                    openTabBtn.style.display = "none";
+                } else {
+                    openTabBtn.style.display = "inline-block";
+                }
+            }
+
+            // Load Content
+            if (viewerBody) {
+                viewerBody.innerHTML = `
+                    <div class="viewer-loading-spinner">
+                        <div>🔄 DECRYPTING & DECODING STREAM...</div>
+                    </div>
+                `;
+
+                setTimeout(() => {
+                    const cleanLink = driveLink.trim().replace(/^["']|["']$/g, "");
+                    
+                    if (cleanLink.startsWith("data:")) {
+                        const splitted = cleanLink.split(';');
+                        const mediaType = splitted[0] ? splitted[0].substring(5) : "";
+                        if (mediaType.startsWith("image/")) {
+                            viewerBody.innerHTML = `<img src="${cleanLink}" class="viewer-img" alt="${safeTitle}" />`;
+                        } else if (mediaType.startsWith("text/") || mediaType === "application/json" || mediaType === "text/javascript" || mediaType === "text/html") {
+                            try {
+                                const base64Part = cleanLink.split(',')[1];
+                                const decoded = atob(base64Part);
+                                viewerBody.innerHTML = `<pre class="viewer-code-container"><code>${escapeHTML(decoded)}</code></pre>`;
+                            } catch (err) {
+                                viewerBody.innerHTML = `<iframe src="${cleanLink}" class="viewer-iframe" allowfullscreen></iframe>`;
+                            }
+                        } else {
+                            viewerBody.innerHTML = `<iframe src="${cleanLink}" class="viewer-iframe" allowfullscreen></iframe>`;
+                        }
+                    } else if (cleanLink.startsWith("javascript:")) {
+                        // Display beautiful custom simulated documents for preset mocks inside secure sandbox mode
+                        if (safeTitle.includes("Semester_Marksheet")) {
+                            viewerBody.innerHTML = `
+                                <div class="viewer-code-container" style="color: #34d399; padding: 24px;">
+                                    <div style="border: 2px dashed #34d399; padding: 20px; border-radius: 4px; background: rgba(52, 211, 153, 0.05); max-width: 600px; margin: 0 auto; line-height: 1.6; font-family: monospace;">
+                                        <h2 style="text-align: center; margin-bottom: 20px; font-family: monospace; letter-spacing: 2px;">🎓 ACADEMIC TRANSCRIPT //</h2>
+                                        <p><strong>REGISTRY ID:</strong> STU-99841-B</p>
+                                        <p><strong>VERIFIED EXAMINEE:</strong> DEMO CONTEXT USER</p>
+                                        <hr style="border: 1px dashed #34d399; margin: 15px 0;">
+                                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                            <thead>
+                                                <tr style="border-bottom: 1px solid #34d399;">
+                                                    <th>MODULE DESCRIPTION</th>
+                                                    <th>CREDITS</th>
+                                                    <th>GRADE</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr><td>CS-401 CRYPTOGRAPHIC ALGORITHMS</td><td>4.0</td><td>A+</td></tr>
+                                                <tr><td>CS-402 DATABASE SHARDING PROTOCOLS</td><td>4.0</td><td>A</td></tr>
+                                                <tr><td>CS-405 SECURED ENCLAVE ARCHITECTURE</td><td>3.0</td><td>A+</td></tr>
+                                                <tr><td>CS-410 ADVANCED WEB CLUSTER ENGINEERING</td><td>3.0</td><td>A</td></tr>
+                                            </tbody>
+                                        </table>
+                                        <hr style="border: 1px dashed #34d399; margin: 15px 0;">
+                                        <p><strong>CUMULATIVE GPA:</strong> 3.92 / 4.00</p>
+                                        <p style="text-align: center; font-size: 0.75rem; opacity: 0.7; margin-top: 25px;">[🔐 DIGITAL VERIFICATION TOKEN APPROVED BY DEPT CLUSTER SECURE]</p>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (safeTitle.includes("Admission_Fee")) {
+                            viewerBody.innerHTML = `
+                                <div class="viewer-code-container" style="color: #f59e0b; padding: 24px;">
+                                    <div style="border: 2px solid #f59e0b; padding: 20px; border-radius: 4px; background: rgba(245, 158, 11, 0.05); max-width: 500px; margin: 0 auto; line-height: 1.6; font-family: monospace;">
+                                        <div style="text-align: center; margin-bottom: 15px;">
+                                            <span style="font-size: 2.5rem;">💸</span>
+                                            <h3 style="margin-top: 10px; font-family: monospace; color: #f59e0b;">TRANSACTION_RECEIPT //</h3>
+                                        </div>
+                                        <p><strong>ISSUER:</strong> OFFICE OF FINANCIAL REGISTRATION</p>
+                                        <p><strong>TRANSACTION REF:</strong> TXN-994857183</p>
+                                        <p><strong>TIMESTAMP:</strong> 2026-06-06 UTC</p>
+                                        <hr style="border-color: #f59e0b; margin: 15px 0;">
+                                        <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                                            <span>ITEM DESCRIPTION</span>
+                                            <span>PAYMENT</span>
+                                        </div>
+                                        <hr style="border-color: #f59e0b; margin: 5px 0 10px 0;">
+                                        <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                                            <span>TUITION FEE (SPRING 2026)</span>
+                                            <span>$4,850.00</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <span>SYSTEM SECURITY LEVY</span>
+                                            <span>$150.00</span>
+                                        </div>
+                                        <hr style="border-color: #f59e0b; margin: 15px 0;">
+                                        <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: bold;">
+                                            <span>TOTAL AMOUNT PAID</span>
+                                            <span>$5,000.00</span>
+                                        </div>
+                                        <div style="margin-top: 25px; text-align: center; background: #f59e0b; color: #000; font-weight: bold; padding: 8px; border-radius: 2px; letter-spacing: 1px;">
+                                            ✅ TRANSACTIONS SECURED // VERIFIED APPROVED
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (safeTitle.includes("UIDAI_Aadhaar")) {
+                            viewerBody.innerHTML = `
+                                <div class="viewer-code-container" style="color: #60a5fa; padding: 24px;">
+                                    <div style="border: 2px dashed #60a5fa; padding: 20px; border-radius: 8px; background: rgba(96, 165, 250, 0.05); max-width: 550px; margin: 0 auto; line-height: 1.5; font-family: monospace;">
+                                        <h3 style="text-align: center; color: #60a5fa; font-weight: bold; margin-bottom: 12px; letter-spacing: 1px;">GOVERNMENT OF INDIA // UIDAI RECORD</h3>
+                                        <hr style="border-color: #60a5fa; margin-bottom: 15px;">
+                                        <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                                            <div style="width: 100px; height: 120px; border: 2px solid #5a5f7d; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; background: rgba(255,255,255,0.05); border-radius: 4px;">👤</div>
+                                            <div style="flex: 1; min-width: 200px;">
+                                                <p><strong>NAME:</strong> JASHUVA V. DEMO</p>
+                                                <p><strong>DOB:</strong> 12 / 08 / 1999</p>
+                                                <p><strong>GENDER:</strong> MALE</p>
+                                                <p><strong>ADDRESS:</strong> SECURE VAULT CLOUD REGISTRY, WORKSPACE CHIP NODE 4</p>
+                                            </div>
+                                        </div>
+                                        <div style="border: 1px solid #60a5fa; padding: 8px; text-align: center; font-size: 1.2rem; font-weight: bold; letter-spacing: 3px; margin-top: 20px; background: rgba(96, 165, 250, 0.1);">
+                                            4882 9901 3855
+                                        </div>
+                                        <p style="text-align: center; font-size: 0.7rem; color: #60a5fa; margin-top: 8px;">मेरा आधार, मेरी पहचान // MY AADHAAR, MY CLOUD IDENTITY</p>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            viewerBody.innerHTML = `
+                                <div class="viewer-code-container" style="color: #38bdf8; padding: 24px; font-family: monospace;">
+                                    <div style="border: 1px solid #1e293b; padding: 16px; border-radius: 4px; background: #030712; line-height: 1.6;">
+                                        <span style="color: #64748b;">// CONFIG PRESET SECURITY VAULT MANIFEST FILE //</span>
+                                        <p style="color: #e2e8f0; margin-top: 10px;"><strong># SECURED SYSTEM ENVIRONMENT CONFIGS:</strong></p>
+                                        <p>VAULT_PORT_INGRESS=3000</p>
+                                        <p>REVERSE_PROXY_SSL=ACTIVE</p>
+                                        <p>CLOUD_SYNC_REDUNDANCY=ENABLED</p>
+                                        <p>METADATA_DECRYPTOR_ALGO=AES-256-GCM</p>
+                                        <p style="color: #e2e8f0; margin-top: 15px;"><strong># ACTIVE REMOTE REPOSITORIES:</strong></p>
+                                        <p>SHEETS_RAW_DB="${SHEETS_CSV_URL}"</p>
+                                        <p>BACKEND_TRANSMITTER="${BACKEND_API_URL}"</p>
+                                        <p style="color: #64748b; margin-top: 20px;">// END OF SYSTEM SECURED MANIFEST REPORT //</p>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        const embedUrl = getGoogleDriveEmbedUrl(cleanLink);
+                        viewerBody.innerHTML = `<iframe src="${embedUrl}" class="viewer-iframe" allow="autoplay; encrypted-media" allowfullscreen="true" referrerpolicy="no-referrer"></iframe>`;
+                    }
+                }, 300);
+            }
+
+            document.getElementById('viewerModal').classList.add('active');
+        };
+
+        window.closeViewerModal = function() {
+            const viewerBody = document.getElementById('viewerBody');
+            if (viewerBody) {
+                viewerBody.innerHTML = "";
+            }
+            document.getElementById('viewerModal').classList.remove('active');
+        };
+
+        function escapeHTML(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
         // Item context menu toggle trigger
         window.toggleCardOptions = function(event, menuId) {
@@ -903,7 +1309,7 @@
 
             const doc = documentInventory.find(item => item.id === id);
             if (doc) {
-                openFileSystemFile(doc.driveLink, doc.title);
+                triggerDirectFileDownload(doc.driveLink, doc.title);
             }
         };
 
