@@ -2,10 +2,12 @@
         // CRITICAL: WIRE UP YOUR LINKS HERE
         // ==========================================
         const BACKEND_API_URL = "https://script.google.com/macros/s/AKfycbz2l6cQkl3tTDk75GthnMQwKTxRNMYsHxz_AE8mlR-Iq_rJ5i3sBx-8gZHMvfpQyNfD/exec";
-        const SHEETS_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQsEc_TZ1SB0jVoBqyRPyEeQBDx6IyKRJ71iPx0ReMWnhVoNJqEmSUhVJufc7MqKHICZPkYZIsne8iv/pub?output=csv";
+        const FILES_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQsEc_TZ1SB0jVoBqyRPyEeQBDx6IyKRJ71iPx0ReMWnhVoNJqEmSUhVJufc7MqKHICZPkYZIsne8iv/pub?gid=0&single=true&output=csv";
+        const FOLDERS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQsEc_TZ1SB0jVoBqyRPyEeQBDx6IyKRJ71iPx0ReMWnhVoNJqEmSUhVJufc7MqKHICZPkYZIsne8iv/pub?gid=22743343&single=true&output=csv";
 
         const DEFAULT_CATEGORIES = [];
-        let documentInventory = [];
+        let fileInventory = [];
+        let folderInventory = [];
 
         // Real-world fallback assets so the sandbox workspace is fully populated right out of the gate
         const MOCK_SEEDS = [
@@ -34,30 +36,47 @@
             }
 
             try {
-                if (!SHEETS_CSV_URL || SHEETS_CSV_URL.startsWith("PASTE_")) {
-                    throw new Error("Google Sheets CSV URL unconfigured");
+                if (!FILES_CSV_URL || FILES_CSV_URL.startsWith("PASTE_") || !FOLDERS_CSV_URL || FOLDERS_CSV_URL.startsWith("PASTE_")) {
+                    throw new Error("Google Sheets CSV URLs unconfigured");
                 }
                 
-                const response = await fetch(SHEETS_CSV_URL);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                // Fetch both feeds concurrently
+                const [filesResponse, foldersResponse] = await Promise.all([
+                    fetch(FILES_CSV_URL),
+                    fetch(FOLDERS_CSV_URL)
+                ]);
+
+                if (!filesResponse.ok || !foldersResponse.ok) {
+                    throw new Error(`Cloud Sync HTTP error! Files status: ${filesResponse.status}, Folders status: ${foldersResponse.status}`);
                 }
                 
-                const dataText = await response.text();
-                parseCSV(dataText);
+                const [filesText, foldersText] = await Promise.all([
+                    filesResponse.text(),
+                    foldersResponse.text()
+                ]);
+
+                fileInventory = parseCSVContent(filesText, 'File');
+                folderInventory = parseCSVContent(foldersText, 'Folder');
                 
-                // Merge Google Sheets data with newly uploaded local files
-                localUploads.forEach(localFile => {
-                    const exists = documentInventory.some(sheetFile => sheetFile.title === localFile.title || sheetFile.id === localFile.id);
-                    if (!exists) {
-                        documentInventory.push(localFile);
+                // Merge Google Sheets data with newly uploaded local files and folders from Sandbox
+                localUploads.forEach(localItem => {
+                    if (localItem.assetType === 'Folder') {
+                        const exists = folderInventory.some(sheetItem => sheetItem.title === localItem.title || sheetItem.id === localItem.id);
+                        if (!exists) {
+                            folderInventory.push(localItem);
+                        }
+                    } else {
+                        const exists = fileInventory.some(sheetItem => sheetItem.title === localItem.title || sheetItem.id === localItem.id);
+                        if (!exists) {
+                            fileInventory.push(localItem);
+                        }
                     }
                 });
 
                 if (syncStatus) {
                     syncStatus.className = "sync-status online";
                     syncStatus.innerHTML = `● CLOUD SYNCED`;
-                    syncStatus.title = "Connected securely to Google Sheets database grid.";
+                    syncStatus.title = "Connected securely to Google Sheets multi-tab database grid.";
                 }
 
                 if (searchBox) {
@@ -66,15 +85,16 @@
                 }
                 renderVault();
             } catch (err) {
-                console.warn("Google Sheets live Cloud Sync offline. Switched to secure Local Sandbox:", err);
+                console.warn("Google Sheets Cloud sync offline. Switched to secure Local Sandbox:", err);
                 
                 // Fall back completely to local inventory
-                documentInventory = localUploads;
+                fileInventory = localUploads.filter(item => item.assetType === 'File' || !item.assetType);
+                folderInventory = localUploads.filter(item => item.assetType === 'Folder');
 
                 if (syncStatus) {
                     syncStatus.className = "sync-status offline";
                     syncStatus.innerHTML = `● LOCAL SANDBOX`;
-                    syncStatus.title = "Unable to connect to Google Sheets. Switched to offline Local Sandbox storage.";
+                    syncStatus.title = "Unable to connect to Google Sheets. Switched to offline WebViewer secure Sandbox.";
                 }
 
                 if (searchBox) {
@@ -86,7 +106,7 @@
         }
 
         // Lightweight safe row splitter
-        function parseCSV(text) {
+        function parseCSVContent(text, defaultType) {
             const results = [];
             let row = [];
             let cell = "";
@@ -124,17 +144,10 @@
                 results.push(row);
             }
             
-            if (results.length < 1) return;
+            if (results.length < 1) return [];
             
             const headers = results[0].map(h => h.trim().replace(/^["']|["']$/g, ""));
-            documentInventory = [];
-            
-            let sheetFolderMap = {};
-            try {
-                sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
-            } catch (e) {
-                sheetFolderMap = {};
-            }
+            const parsedArray = [];
             
             for (let i = 1; i < results.length; i++) {
                 const currentLine = results[i];
@@ -146,49 +159,34 @@
                     obj[header] = value;
                 });
                 
-                // Normalize to new database model
+                // Normalize to standard model
                 obj.id = obj.id || ("VAL-" + Math.floor(1000 + Math.random() * 9000));
-                obj.title = obj.title || "Unidentified Asset";
-                obj.category = obj.category || "Other";
+                obj.title = obj.title || (defaultType === 'Folder' ? "Unidentified Folder" : "Unidentified Asset");
+                obj.category = obj.category || (defaultType === 'Folder' ? "Directory" : "Other");
                 obj.description = obj.description || "";
-                obj.driveLink = obj.driveLink || "javascript:void(0)";
+                obj.driveLink = obj.driveLink || (defaultType === 'Folder' ? "javascript:void(0)" : "javascript:void(0)");
                 
-                // Map folder structures, defaulting to root
-                obj.parentFolder = obj.parentFolder || sheetFolderMap[obj.id] || "root";
+                // Map parent folder hierarchy, default to root
+                obj.parentFolder = obj.parentFolder || "root";
+                obj.assetType = defaultType;
 
-                // Ensure assetType is parsed/deduced properly
-                if (obj.assetType) {
-                    const normType = obj.assetType.trim().toLowerCase();
-                    if (normType === 'folder' || obj.fileType === 'application/x-folder' || obj.fileBase64 === 'EMPTY_FOLDER' || obj.fileBase64 === 'DIRECTORY_ENTRY') {
-                        obj.assetType = 'Folder';
-                    } else {
-                        obj.assetType = 'File';
-                    }
-                } else {
-                    if (obj.category === 'Directory' || obj.fileType === 'application/x-folder' || obj.fileBase64 === 'EMPTY_FOLDER' || obj.fileBase64 === 'DIRECTORY_ENTRY') {
-                        obj.assetType = 'Folder';
-                    } else {
-                        obj.assetType = 'File';
-                    }
-                }
-
-                documentInventory.push(obj);
+                parsedArray.push(obj);
             }
+            return parsedArray;
         }
 
         // Helper to check folder details
         function getActiveFolderName(folderId) {
             if (folderId === 'root') return 'Root';
-            const folderDoc = documentInventory.find(item => item.id === folderId && item.assetType === 'Folder');
+            const folderDoc = folderInventory.find(item => item.id === folderId);
             return folderDoc ? folderDoc.title : 'Unidentified Folder';
         }
 
-        // Folder file/item count helper
+        // Folder file/item count helper (counts nested files & folders inside an active folder ID)
         function getFolderFileCount(folderId) {
-            return documentInventory.filter(item => {
-                const parent = item.parentFolder || 'root';
-                return parent === folderId;
-            }).length;
+            const filesCount = fileInventory.filter(item => (item.parentFolder || 'root') === folderId).length;
+            const foldersCount = folderInventory.filter(item => (item.parentFolder || 'root') === folderId).length;
+            return filesCount + foldersCount;
         }
 
         // Render breadcrumbs navigation row traversed upwards from activeFolderId
@@ -205,7 +203,7 @@
 
             while (currentId && currentId !== 'root' && loopGuard < 50) {
                 loopGuard++;
-                const folderDoc = documentInventory.find(item => item.id === currentId && item.assetType === 'Folder');
+                const folderDoc = folderInventory.find(item => item.id === currentId);
                 if (folderDoc) {
                     trail.unshift(folderDoc);
                     currentId = folderDoc.parentFolder || 'root';
@@ -230,7 +228,7 @@
 
         // Navigation actions
         window.openFolder = function(folderId) {
-            window.location.search = '?folder=' + encodeURIComponent(folderId);
+            window.location.search = '?folder=' + folderId;
         };
 
         window.navigateHome = function() {
@@ -242,9 +240,9 @@
             const activeFolderId = urlParams.get('folder') || 'root';
             if (activeFolderId === 'root') return;
 
-            const folderDoc = documentInventory.find(item => item.id === activeFolderId && item.assetType === 'Folder');
+            const folderDoc = folderInventory.find(item => item.id === activeFolderId);
             const parentId = folderDoc ? (folderDoc.parentFolder || 'root') : 'root';
-            window.location.search = '?folder=' + encodeURIComponent(parentId);
+            window.location.search = '?folder=' + parentId;
         };
 
         window.refreshDatabase = async function() {
@@ -266,6 +264,8 @@
         // Render matching vault records or directory contents
         function renderVault(filterTerm = "") {
             const grid = document.getElementById('vaultGrid');
+            if (!grid) return;
+            
             grid.innerHTML = "";
             const term = filterTerm.toLowerCase().trim();
 
@@ -290,9 +290,13 @@
             // If searched, flat render ALL matching records globally
             if (term.length > 0) {
                 // Hide breadcrumbs container when searching globally
-                document.getElementById('breadcrumbs').style.display = 'none';
+                const breadcrumbsEl = document.getElementById('breadcrumbs');
+                if (breadcrumbsEl) {
+                    breadcrumbsEl.style.display = 'none';
+                }
 
-                const matches = documentInventory.filter(doc => {
+                // GLOBAL SEARCH: Filter ONLY the 'fileInventory' array globally
+                const matches = fileInventory.filter(doc => {
                     return (doc.title && doc.title.toLowerCase().includes(term)) ||
                            (doc.category && doc.category.toLowerCase().includes(term)) ||
                            (doc.description && doc.description.toLowerCase().includes(term));
@@ -308,16 +312,11 @@
                     card.className = 'doc-card';
                     card.onclick = (e) => {
                         if (e.target.closest('.card-options-container')) return;
-                        if (doc.assetType === 'Folder') {
-                            window.location.search = '?folder=' + encodeURIComponent(doc.id);
-                        } else {
-                            openFileSystemFile(doc.driveLink, doc.title);
-                        }
+                        openFileSystemFile(doc.driveLink, doc.title);
                     };
-                    const isFold = doc.assetType === 'Folder';
                     const parentName = getActiveFolderName(doc.parentFolder || 'root');
                     card.innerHTML = `
-                        <div class="${isFold ? 'folder' : 'file'}-icon">${isFold ? '📁' : '📄'}</div>
+                        <div class="file-icon">📄</div>
                         <div class="doc-meta" style="flex: 1;">
                             <h3>${doc.title || "Unidentified Asset"}</h3>
                             <p><strong>Tracking Registry:</strong> ${doc.id || "N/A"}</p>
@@ -331,11 +330,11 @@
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle></svg>
                                 </button>
                                 <div id="match-${doc.id}-menu" class="options-dropdown-menu">
-                                    <button class="options-dropdown-item" onclick="viewDetails(event, '${isFold ? 'folder' : 'file'}', '${doc.id}')">🔬 Details</button>
-                                    <button class="options-dropdown-item" onclick="copyItem(event, '${isFold ? 'folder' : 'file'}', '${doc.id}')">📋 Copy</button>
-                                    <button class="options-dropdown-item" onclick="triggerRename(event, '${isFold ? 'folder' : 'file'}', '${doc.id}')">✏️ Rename</button>
-                                    ${!isFold ? `<button class="options-dropdown-item" onclick="downloadFileDirectly(event, '${doc.id}')">💾 Download</button>` : ''}
-                                    <button class="options-dropdown-item delete-item" onclick="triggerDelete(event, '${isFold ? 'folder' : 'file'}', '${doc.id}')">🗑️ Delete</button>
+                                    <button class="options-dropdown-item" onclick="viewDetails(event, 'file', '${doc.id}')">🔬 Details</button>
+                                    <button class="options-dropdown-item" onclick="copyItem(event, 'file', '${doc.id}')">📋 Copy</button>
+                                    <button class="options-dropdown-item" onclick="triggerRename(event, 'file', '${doc.id}')">✏️ Rename</button>
+                                    <button class="options-dropdown-item" onclick="downloadFileDirectly(event, '${doc.id}')">💾 Download</button>
+                                    <button class="options-dropdown-item delete-item" onclick="triggerDelete(event, 'file', '${doc.id}')">🗑️ Delete</button>
                                 </div>
                             </div>
                         </div>
@@ -346,31 +345,36 @@
             }
 
             // Normal Folder View navigation (Filtered using active folder parameters)
-            document.getElementById('breadcrumbs').style.display = 'flex';
+            const breadcrumbsEl = document.getElementById('breadcrumbs');
+            if (breadcrumbsEl) {
+                breadcrumbsEl.style.display = 'flex';
+            }
             renderBreadcrumbs();
 
             // Display ONLY items whose parentFolder matches our active folder parameter ID exactly
-            const contents = documentInventory.filter(item => {
+            const folders = folderInventory.filter(item => {
                 const parent = item.parentFolder || 'root';
                 return parent === activeFolderId;
             });
 
-            const folders = contents.filter(item => item.assetType === 'Folder');
-            const files = contents.filter(item => item.assetType === 'File' || !item.assetType);
+            const files = fileInventory.filter(item => {
+                const parent = item.parentFolder || 'root';
+                return parent === activeFolderId;
+            });
 
             if (folders.length === 0 && files.length === 0) {
                 grid.innerHTML = `<p style="color: var(--text-muted); padding: 20px 0;">THIS FOLDER IS CURRENTLY EMPTY.</p>`;
                 return;
             }
 
-            // 1. Render subfolders
+            // 1. Render subfolders (📁 icon)
             folders.forEach(fold => {
                 const fileCount = getFolderFileCount(fold.id);
                 const card = document.createElement('div');
                 card.className = 'folder-card';
                 card.onclick = (e) => {
                     if (e.target.closest('.card-options-container')) return;
-                    window.location.search = '?folder=' + encodeURIComponent(fold.id);
+                    window.location.search = '?folder=' + fold.id;
                 };
                 card.innerHTML = `
                     <div class="folder-icon">📁</div>
@@ -393,7 +397,7 @@
                 grid.appendChild(card);
             });
 
-            // 2. Render files
+            // 2. Render files (📄 icon)
             files.forEach(doc => {
                 const card = document.createElement('div');
                 card.className = 'doc-card';
@@ -496,12 +500,21 @@
             };
             
             localUploads.push(newDoc);
-            localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+            try {
+                localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+            } catch (e) {}
             
             // Append and merge into the active memory inventory
-            const exists = documentInventory.some(doc => doc.id === newId);
-            if (!exists) {
-                documentInventory.push(newDoc);
+            if (assetType === 'Folder') {
+                const exists = folderInventory.some(doc => doc.id === newId);
+                if (!exists) {
+                    folderInventory.push(newDoc);
+                }
+            } else {
+                const exists = fileInventory.some(doc => doc.id === newId);
+                if (!exists) {
+                    fileInventory.push(newDoc);
+                }
             }
             renderVault();
         }
@@ -535,7 +548,7 @@
 
                 if (resData.status === "SUCCESS") {
                     if (assetType === 'Folder') {
-                        alert("Secure fold sync confirmed! Folder registered in sheets database.");
+                        alert("Secure folder sync confirmed! Folder registered in sheets database.");
                     } else {
                         alert("Secure sync confirmed! Row written to sheet and file deposited in Drive.");
                     }
@@ -999,7 +1012,8 @@
                                         <p>CLOUD_SYNC_REDUNDANCY=ENABLED</p>
                                         <p>METADATA_DECRYPTOR_ALGO=AES-256-GCM</p>
                                         <p style="color: #e2e8f0; margin-top: 15px;"><strong># ACTIVE REMOTE REPOSITORIES:</strong></p>
-                                        <p>SHEETS_RAW_DB="${SHEETS_CSV_URL}"</p>
+                                        <p>FILES_RAW_DB="${FILES_CSV_URL}"</p>
+                                        <p>FOLDERS_RAW_DB="${FOLDERS_CSV_URL}"</p>
                                         <p>BACKEND_TRANSMITTER="${BACKEND_API_URL}"</p>
                                         <p style="color: #64748b; margin-top: 20px;">// END OF SYSTEM SECURED MANIFEST REPORT //</p>
                                     </div>
@@ -1062,7 +1076,7 @@
             if (!contentEl) return;
 
             if (type === 'folder') {
-                const folderDoc = documentInventory.find(item => item.id === id);
+                const folderDoc = folderInventory.find(item => item.id === id);
                 const title = folderDoc ? folderDoc.title : "Unidentified Folder";
                 const parent = folderDoc ? (folderDoc.parentFolder || 'root') : 'root';
                 const parentPathName = getActiveFolderName(parent);
@@ -1083,7 +1097,7 @@
                     </div>
                     <div class="details-row">
                         <span class="details-key">Document Count</span>
-                        <span class="details-val">${count} item(s) index(es) recorded in this folder</span>
+                        <span class="details-val">${count} item(s) recorded in this folder</span>
                     </div>
                     <div class="details-row">
                         <span class="details-key">Operational Class</span>
@@ -1091,7 +1105,7 @@
                     </div>
                 `;
             } else if (type === 'file') {
-                const doc = documentInventory.find(item => item.id === id);
+                const doc = fileInventory.find(item => item.id === id);
                 if (!doc) return;
 
                 const isLocal = doc.driveLink && doc.driveLink.startsWith("data:");
@@ -1147,7 +1161,7 @@
             document.getElementById('renameTargetType').value = type;
             document.getElementById('renameTargetId').value = id;
 
-            const doc = documentInventory.find(item => item.id === id);
+            const doc = type === 'folder' ? folderInventory.find(item => item.id === id) : fileInventory.find(item => item.id === id);
             const oldTitle = doc ? doc.title : "";
             document.getElementById('renameTargetOldName').value = oldTitle;
 
@@ -1187,10 +1201,17 @@
                     doc.title = newName;
                 }
             });
-            localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+            try {
+                localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+            } catch (err) {}
 
-            // 2. Update memory document inventory title
-            documentInventory.forEach(doc => {
+            // 2. Update memory arrays
+            fileInventory.forEach(doc => {
+                if (doc.id === targetId) {
+                    doc.title = newName;
+                }
+            });
+            folderInventory.forEach(doc => {
                 if (doc.id === targetId) {
                     doc.title = newName;
                 }
@@ -1209,7 +1230,7 @@
                 menu.classList.remove('active');
             });
 
-            const doc = documentInventory.find(item => item.id === id);
+            const doc = fileInventory.find(item => item.id === id);
             if (doc) {
                 triggerDirectFileDownload(doc.driveLink, doc.title);
             }
@@ -1228,7 +1249,7 @@
             document.getElementById('deleteTargetId').value = id;
 
             const promptEl = document.getElementById('deletePromptMessage');
-            const doc = documentInventory.find(item => item.id === id);
+            const doc = type === 'folder' ? folderInventory.find(item => item.id === id) : fileInventory.find(item => item.id === id);
             const title = doc ? doc.title : "Unidentified Asset";
 
             if (type === 'folder') {
@@ -1252,7 +1273,12 @@
 
             while (previousSize !== resultIds.size) {
                 previousSize = resultIds.size;
-                documentInventory.forEach(item => {
+                fileInventory.forEach(item => {
+                    if (item.parentFolder && resultIds.has(item.parentFolder)) {
+                        resultIds.add(item.id);
+                    }
+                });
+                folderInventory.forEach(item => {
                     if (item.parentFolder && resultIds.has(item.parentFolder)) {
                         resultIds.add(item.id);
                     }
@@ -1270,7 +1296,7 @@
             const submitBtn = document.getElementById('submitDeleteBtn');
 
             if (type === 'file') {
-                const doc = documentInventory.find(item => item.id === targetId);
+                const doc = fileInventory.find(item => item.id === targetId);
                 const isLocal = doc && doc.driveLink && doc.driveLink.startsWith("data:");
                 
                 if (doc && !isLocal && BACKEND_API_URL && !BACKEND_API_URL.startsWith("PASTE_")) {
@@ -1292,30 +1318,32 @@
                         }
                     } catch (err) {
                         console.error("Cloud purge failed, removing from local cache only:", err);
-                        alert("Cloud synchronization unavailable. Purged file reference from local sandbox interface. Please note the underlying cloud copy might need manual cleanup if Google Drive limits API interaction.");
+                        alert("Cloud synchronization unavailable. Purged file reference from local sandbox interface.");
                     } finally {
                         submitBtn.disabled = false;
                         submitBtn.innerText = "CONFIRM PURGE";
                     }
                 }
 
-                // 1. Remove files matching matching ID from localStorage
+                // 1. Remove file matching matching ID from localStorage
                 let localUploads = [];
                 try {
                     localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
                 } catch (err) {}
                 localUploads = localUploads.filter(doc => doc.id !== targetId);
-                localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+                try {
+                    localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+                } catch (err) {}
 
-                // 2. Remove files matching matching ID from memory inventory
-                documentInventory = documentInventory.filter(doc => doc.id !== targetId);
+                // 2. Remove file matching matching ID from memory inventory
+                fileInventory = fileInventory.filter(doc => doc.id !== targetId);
 
             } else if (type === 'folder') {
                 const idsToDelete = getNestedItemsToDelete(targetId);
 
                 // Gather online cloud files from nested list to delete
-                const filesToDelete = documentInventory.filter(item => idsToDelete.includes(item.id));
-                const onlineFiles = filesToDelete.filter(doc => doc.assetType === 'File' && doc.driveLink && !doc.driveLink.startsWith("data:"));
+                const filesToDelete = fileInventory.filter(item => idsToDelete.includes(item.id));
+                const onlineFiles = filesToDelete.filter(doc => doc.driveLink && !doc.driveLink.startsWith("data:"));
 
                 if (onlineFiles.length > 0 && BACKEND_API_URL && !BACKEND_API_URL.startsWith("PASTE_")) {
                     submitBtn.disabled = true;
@@ -1347,9 +1375,12 @@
                     localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
                 } catch (err) {}
                 localUploads = localUploads.filter(doc => !idsToDelete.includes(doc.id));
-                localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+                try {
+                    localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+                } catch (err) {}
 
-                documentInventory = documentInventory.filter(doc => !idsToDelete.includes(doc.id));
+                fileInventory = fileInventory.filter(doc => !idsToDelete.includes(doc.id));
+                folderInventory = folderInventory.filter(doc => !idsToDelete.includes(doc.id));
             }
 
             closeDeleteModal();
@@ -1398,7 +1429,7 @@
                 menu.classList.remove('active');
             });
 
-            const doc = documentInventory.find(item => item.id === id);
+            const doc = type === 'folder' ? folderInventory.find(item => item.id === id) : fileInventory.find(item => item.id === id);
             if (!doc) return;
 
             clipboard = {
@@ -1407,7 +1438,9 @@
                 name: doc.title
             };
 
-            localStorage.setItem("vault_clipboard_storage", JSON.stringify(clipboard));
+            try {
+                localStorage.setItem("vault_clipboard_storage", JSON.stringify(clipboard));
+            } catch (e) {}
             window.updateClipboardUI();
         };
 
@@ -1418,17 +1451,19 @@
             const activeFolderId = urlParams.get('folder') || 'root';
 
             if (clipboard.type === 'file') {
-                const doc = documentInventory.find(item => item.id === clipboard.id);
+                const doc = fileInventory.find(item => item.id === clipboard.id);
                 if (!doc) {
                     alert("Source file not found (it may have been deleted).");
                     clipboard = null;
-                    localStorage.removeItem("vault_clipboard_storage");
+                    try {
+                        localStorage.removeItem("vault_clipboard_storage");
+                    } catch (e) {}
                     window.updateClipboardUI();
                     return;
                 }
 
                 let newTitle = doc.title || "Untitled File";
-                const isDuplicate = documentInventory.some(f => f.parentFolder === activeFolderId && f.title === newTitle);
+                const isDuplicate = fileInventory.some(f => f.parentFolder === activeFolderId && f.title === newTitle);
                 
                 if (isDuplicate) {
                     const lastDot = newTitle.lastIndexOf('.');
@@ -1458,10 +1493,12 @@
                     localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
                 } catch(e) {}
                 localUploads.push(clonedDoc);
-                localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+                try {
+                    localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+                } catch (e) {}
 
                 // Push inside active memory
-                documentInventory.push(clonedDoc);
+                fileInventory.push(clonedDoc);
 
             } else if (clipboard.type === 'folder') {
                 const folderId = clipboard.id;
@@ -1473,20 +1510,22 @@
                     return;
                 }
 
-                const folderDoc = documentInventory.find(item => item.id === folderId);
+                const folderDoc = folderInventory.find(item => item.id === folderId);
                 if (!folderDoc) {
                     alert("Source folder not found (it may have been deleted).");
                     clipboard = null;
-                    localStorage.removeItem("vault_clipboard_storage");
+                    try {
+                        localStorage.removeItem("vault_clipboard_storage");
+                    } catch (e) {}
                     window.updateClipboardUI();
                     return;
                 }
 
                 let newFolderName = folderDoc.title || "Untitled Folder";
-                let folderExists = documentInventory.some(f => f.parentFolder === activeFolderId && f.title === newFolderName && f.assetType === 'Folder');
+                let folderExists = folderInventory.some(f => f.parentFolder === activeFolderId && f.title === newFolderName);
                 while (folderExists) {
                     newFolderName = newFolderName + " - Copy";
-                    folderExists = documentInventory.some(f => f.parentFolder === activeFolderId && f.title === newFolderName && f.assetType === 'Folder');
+                    folderExists = folderInventory.some(f => f.parentFolder === activeFolderId && f.title === newFolderName);
                 }
 
                 // 1. Clone top-level folder
@@ -1506,8 +1545,10 @@
                     localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
                 } catch(e) {}
                 localUploads.push(clonedFolder);
-                localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
-                documentInventory.push(clonedFolder);
+                try {
+                    localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+                } catch (e) {}
+                folderInventory.push(clonedFolder);
 
                 // 2. Recursively clone descendants
                 const queue = [{ src: folderId, dst: clonedFolderId }];
@@ -1517,12 +1558,27 @@
 
                 while (queue.length > 0) {
                     const current = queue.shift();
-                    const descendants = documentInventory.filter(item => item.parentFolder === current.src);
+                    const descendantFiles = fileInventory.filter(item => item.parentFolder === current.src);
+                    const descendantFolders = folderInventory.filter(item => item.parentFolder === current.src);
 
-                    descendants.forEach(child => {
+                    descendantFolders.forEach(child => {
                         const newChildId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
-                        const isFold = child.assetType === 'Folder';
+                        const clonedDoc = {
+                            id: newChildId,
+                            title: child.title,
+                            category: 'Directory',
+                            parentFolder: current.dst,
+                            description: child.description || "",
+                            driveLink: "javascript:void(0)",
+                            assetType: 'Folder'
+                        };
+                        localUploads.push(clonedDoc);
+                        folderInventory.push(clonedDoc);
+                        queue.push({ src: child.id, dst: newChildId });
+                    });
 
+                    descendantFiles.forEach(child => {
+                        const newChildId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
                         const clonedDoc = {
                             id: newChildId,
                             title: child.title,
@@ -1530,18 +1586,15 @@
                             parentFolder: current.dst,
                             description: child.description || "",
                             driveLink: child.driveLink,
-                            assetType: child.assetType
+                            assetType: 'File'
                         };
-
                         localUploads.push(clonedDoc);
-                        documentInventory.push(clonedDoc);
-
-                        if (isFold) {
-                            queue.push({ src: child.id, dst: newChildId });
-                        }
+                        fileInventory.push(clonedDoc);
                     });
                 }
-                localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+                try {
+                    localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+                } catch (e) {}
             }
 
             renderVault();
