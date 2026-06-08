@@ -9,30 +9,41 @@
         let fileInventory = [];
         let folderInventory = [];
 
-        // Real-world fallback assets so the sandbox workspace is fully populated right out of the gate
-        const MOCK_SEEDS = [
-            { id: "VAL-1092", title: "Semester_Marksheet_V1.pdf", category: "Education", description: "Official college semester transcripts. Signed copy and degree logs.", driveLink: "javascript:alert('SECURED SANDBOX MODE: This is a fallback record. Upload custom files below!')", assetType: "File", parentFolder: "root" },
-            { id: "VAL-2201", title: "Admission_Fee_Receipt_2026.pdf", category: "Receipt", description: "Valid admission token fee details and receipt acknowledgment.", driveLink: "javascript:alert('SECURED SANDBOX MODE: This is a fallback record. Upload custom files below!')", assetType: "File", parentFolder: "root" },
-            { id: "VAL-8402", title: "UIDAI_Aadhaar_Verification.pdf", category: "Identification", description: "Governing UIDAI digital identification proof token copy.", driveLink: "javascript:alert('SECURED SANDBOX MODE: This is a fallback record. Upload custom files below!')", assetType: "File", parentFolder: "root" },
-            { id: "VAL-3019", title: "Secure_Vault_Manifest.txt", category: "Manifest", description: "Operational tracking manifest detailing digital document indexing structures.", driveLink: "javascript:alert('SECURED SANDBOX MODE: This is a fallback record. Upload custom files below!')", assetType: "File", parentFolder: "root" }
-        ];
+        // No mock fallback assets - completely empty and clean production slate
+        const MOCK_SEEDS = [];
 
         // 1. Fetch data from Google Sheets CSV on load with offline safety fallback
         async function fetchDatabase() {
             const searchBox = document.getElementById('searchBox');
             const syncStatus = document.getElementById('syncStatus');
             
-            // Core local files load
+            // Core local files load - sanitized of all previous mock seeds
             let localUploads = [];
             try {
-                localUploads = JSON.parse(localStorage.getItem("vault_local_files"));
-                // If never initialized, seed it
-                if (!localUploads || !Array.isArray(localUploads)) {
-                    localUploads = MOCK_SEEDS;
-                    localStorage.setItem("vault_local_files", JSON.stringify(MOCK_SEEDS));
+                const stored = localStorage.getItem("vault_local_files");
+                localUploads = stored ? JSON.parse(stored) : [];
+                if (localUploads && Array.isArray(localUploads)) {
+                    // Filter out any lingering mock seed items from client browser storage
+                    localUploads = localUploads.filter(item => {
+                        if (!item) return false;
+                        const dLink = String(item.driveLink || "");
+                        const titleLower = String(item.title || "").toLowerCase();
+                        const isMock = dLink.includes("javascript:alert('SECURED") || 
+                                       dLink.includes("SANDBOX MODE") || 
+                                       ["VAL-1092", "VAL-2201", "VAL-8402", "VAL-3019", "VAL-7759"].includes(item.id) ||
+                                       titleLower.includes("semester_marksheet_v1") ||
+                                       titleLower.includes("admission_fee_receipt") ||
+                                       titleLower.includes("uidai_aadhaar_verification") ||
+                                       titleLower.includes("secure_vault_manifest");
+                        return !isMock;
+                    });
+                    localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+                } else {
+                    localUploads = [];
+                    localStorage.setItem("vault_local_files", JSON.stringify([]));
                 }
             } catch (e) {
-                localUploads = MOCK_SEEDS;
+                localUploads = [];
             }
 
             try {
@@ -179,9 +190,14 @@
                     }
                 });
                 
+                // If title/name is empty or blank, skip this row as it represents an empty/incomplete record
+                if (!obj.title || !obj.title.trim()) {
+                    continue;
+                }
+
                 // Normalize and set robust defaults
                 obj.id = obj.id || ("VAL-" + Math.floor(1000 + Math.random() * 9000));
-                obj.title = obj.title || (defaultType === 'Folder' ? "Folder (" + obj.id + ")" : "Asset (" + obj.id + ")");
+                obj.title = obj.title; // Keep original parsed title
                 obj.category = obj.category || (defaultType === 'Folder' ? "Directory" : "Other");
                 obj.description = obj.description || "";
                 obj.driveLink = obj.driveLink || (defaultType === 'Folder' ? "javascript:void(0)" : "javascript:void(0)");
