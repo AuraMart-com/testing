@@ -160,6 +160,27 @@
         </div>
     </div>
 
+    <!-- Universal File Viewer Modal -->
+    <div id="viewerModal" class="modal-overlay">
+        <div class="modal-window file-viewer-window">
+            <div class="viewer-header">
+                <h3 id="viewerTitle">SECURE_FILE_PREVIEW //</h3>
+                <div class="viewer-actions">
+                    <button type="button" id="viewerDownloadBtn" class="viewer-secondary-btn" title="Download secure copy">
+                        📥 DOWNLOAD
+                    </button>
+                    <button type="button" id="viewerOpenTabBtn" class="viewer-secondary-btn" title="Open in raw tab">
+                        ↗ OPEN TAB
+                    </button>
+                    <button type="button" class="cancel-btn close-viewer-btn" onclick="closeViewerModal()">✕</button>
+                </div>
+            </div>
+            <div id="viewerBody" class="viewer-body">
+                <!-- Dynamically populated loading, preview iframe, image, or text code container -->
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>

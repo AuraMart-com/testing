@@ -169,7 +169,7 @@
                         obj.description = value;
                     } else if (lowerHeader === 'drivelink' || lowerHeader === 'link' || lowerHeader === 'url' || lowerHeader === 'fileurl') {
                         obj.driveLink = value;
-                    } else if (lowerHeader === 'parentfolder' || lowerHeader === 'parent' || lowerHeader === 'parentid') {
+                    } else if (lowerHeader === 'parentfolder' || lowerHeader === 'parenfolder' || lowerHeader === 'parent' || lowerHeader === 'parentid') {
                         obj.parentFolder = value;
                     } else if (lowerHeader === 'assettype' || lowerHeader === 'type') {
                         obj.assetType = value;
@@ -476,14 +476,23 @@
             const urlParams = new URLSearchParams(window.location.search);
             const parentId = urlParams.get('folder') || 'root';
 
+            const generatedId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
+
             const payload = {
+                id: generatedId,
+                folderName: sanitized,
                 fileName: sanitized,
+                title: sanitized,
+                name: sanitized,
                 fileType: 'application/x-folder',
                 fileCategory: 'Directory',
+                category: 'Directory',
                 fileDescription: 'Virtual folder partition created via UI folder provisioner',
+                description: 'Virtual folder partition created via UI folder provisioner',
                 fileBase64: 'EMPTY_FOLDER',
                 parentFolder: parentId,
-                assetType: 'Folder'
+                assetType: 'Folder',
+                driveLink: 'javascript:void(0)'
             };
 
             const submitFolderBtn = document.getElementById('submitFolderBtn');
@@ -498,7 +507,7 @@
         }
 
         // Saves uploaded documents directly into our persistent local storage vault
-        function saveLocalUpload(name, type, category, parentFolder, description, base64Data, assetType = 'File') {
+        function saveLocalUpload(name, type, category, parentFolder, description, base64Data, assetType = 'File', predefinedId = null) {
             let localUploads = [];
             try {
                 localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
@@ -506,7 +515,7 @@
                 localUploads = [];
             }
             
-            const newId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
+            const newId = predefinedId || ("VAL-" + Math.floor(1000 + Math.random() * 9000));
             const dataUrl = assetType === 'Folder' ? 'javascript:void(0)' : `data:${type};base64,${base64Data}`;
             
             const newDoc = {
@@ -541,6 +550,7 @@
 
         // Isolate the physical network transmission logic to Google Sheets or offline safe storage
         async function transmitToCloud(payload, buttonElement) {
+            const customId = payload.id || ("VAL-" + Math.floor(1000 + Math.random() * 9000));
             const customName = payload.fileName;
             const categoryTag = payload.fileCategory;
             const description = payload.fileDescription || document.getElementById('fileDescription').value;
@@ -552,12 +562,21 @@
                     throw new Error("Apps Script URL unconfigured");
                 }
 
-                // Compile the payload exactly with the columns
+                // Compile the payload exactly with the columns for both files and folders sheets
                 const completePayload = {
                     ...payload,
+                    id: customId,
+                    title: customName,
+                    folderName: customName,
+                    fileName: customName,
+                    name: customName,
+                    category: assetType === 'Folder' ? 'Directory' : categoryTag,
+                    fileCategory: assetType === 'Folder' ? 'Directory' : categoryTag,
+                    description: description,
+                    fileDescription: description,
                     parentFolder: parentFolderId,
                     assetType: assetType,
-                    fileCategory: assetType === 'Folder' ? 'Directory' : categoryTag
+                    driveLink: payload.driveLink || 'javascript:void(0)'
                 };
 
                 const response = await fetch(BACKEND_API_URL, {
@@ -581,13 +600,13 @@
             } catch(error) {
                 if (assetType === 'Folder') {
                     console.warn("Cloud transmission bypassed. Storing folder locally inside Secured Sandboxed storage:", error);
-                    saveLocalUpload(customName, 'application/x-folder', 'Directory', parentFolderId, description, 'EMPTY_FOLDER', 'Folder');
+                    saveLocalUpload(customName, 'application/x-folder', 'Directory', parentFolderId, description, 'EMPTY_FOLDER', 'Folder', customId);
                     alert("Local sandbox sync verified! Folder successfully indexed and saved to secure offline local storage.");
                     closeModal();
                     document.getElementById('uploadForm').reset();
                 } else {
                     console.warn("Cloud transmission bypassed. Storing locally inside Secured Sandboxed storage:", error);
-                    saveLocalUpload(customName, payload.fileType || "application/octet-stream", categoryTag, parentFolderId, description, payload.fileBase64, 'File');
+                    saveLocalUpload(customName, payload.fileType || "application/octet-stream", categoryTag, parentFolderId, description, payload.fileBase64, 'File', customId);
                     alert("Local sandbox sync verified! Document successfully indexed and saved to secure offline local storage.");
                     closeModal();
                     document.getElementById('uploadForm').reset();
@@ -615,15 +634,23 @@
             if (assetType === 'Folder') {
                 const customName = document.getElementById('fileNameInput').value.trim() || "New Folder";
                 const description = document.getElementById('fileDescription').value;
+                const generatedId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
 
                 const payload = {
+                    id: generatedId,
+                    folderName: customName,
                     fileName: customName,
+                    title: customName,
+                    name: customName,
                     fileType: 'application/x-folder',
                     fileCategory: 'Directory',
+                    category: 'Directory',
                     fileDescription: description,
+                    description: description,
                     fileBase64: 'EMPTY_FOLDER',
                     parentFolder: activeFolderId,
-                    assetType: 'Folder'
+                    assetType: 'Folder',
+                    driveLink: 'javascript:void(0)'
                 };
 
                 submitBtn.disabled = true;
@@ -637,6 +664,7 @@
                 const customName = document.getElementById('fileNameInput').value.trim() || file.name;
                 const categoryTag = document.getElementById('fileCategoryTagInput').value.trim() || "Other";
                 const description = document.getElementById('fileDescription').value;
+                const generatedId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
 
                 submitBtn.disabled = true;
                 submitBtn.innerText = "CONVERTING & TRANSMITTING...";
@@ -648,13 +676,20 @@
                     const base64String = reader.result.split(',')[1]; // Strip data descriptor header metadata
                     
                     const payload = {
+                        id: generatedId,
+                        folderName: customName,
                         fileName: customName,
+                        title: customName,
+                        name: customName,
                         fileType: file.type,
                         fileCategory: categoryTag, // Written to the 'category' sheet column
+                        category: categoryTag,
                         fileDescription: description,
+                        description: description,
                         fileBase64: base64String,
                         parentFolder: activeFolderId,
-                        assetType: 'File'
+                        assetType: 'File',
+                        driveLink: 'javascript:void(0)'
                     };
 
                     await transmitToCloud(payload, submitBtn);
@@ -1203,7 +1238,7 @@
         };
 
         // Handle rename save submissions
-        document.getElementById('renameForm').addEventListener('submit', function(e) {
+        document.getElementById('renameForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const type = document.getElementById('renameTargetType').value;
             const targetId = document.getElementById('renameTargetId').value;
@@ -1211,7 +1246,12 @@
 
             if (!newName) return;
 
-            // 1. Update localStorage uploads
+            // 1. Find matched memory item
+            const item = type === 'folder' 
+                ? folderInventory.find(doc => doc.id === targetId)
+                : fileInventory.find(doc => doc.id === targetId);
+
+            // 2. Update localStorage uploads
             let localUploads = [];
             try {
                 localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
@@ -1225,7 +1265,7 @@
                 localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
             } catch (err) {}
 
-            // 2. Update memory arrays
+            // 3. Update memory arrays
             fileInventory.forEach(doc => {
                 if (doc.id === targetId) {
                     doc.title = newName;
@@ -1237,8 +1277,52 @@
                 }
             });
 
-            closeRenameModal();
-            renderVault();
+            // 4. If connected to Cloud, transmit the renamed metadata
+            if (item && BACKEND_API_URL && !BACKEND_API_URL.startsWith("PASTE_")) {
+                const submitRenameBtn = document.getElementById('submitRenameBtn');
+                if (submitRenameBtn) {
+                    submitRenameBtn.disabled = true;
+                    submitRenameBtn.innerText = "SYNCING RENAME...";
+                }
+
+                const completePayload = {
+                    id: targetId,
+                    title: newName,
+                    folderName: newName,
+                    fileName: newName,
+                    name: newName,
+                    category: type === 'folder' ? 'Directory' : (item.category || item.fileCategory || 'Other'),
+                    fileCategory: type === 'folder' ? 'Directory' : (item.category || item.fileCategory || 'Other'),
+                    description: item.description || '',
+                    fileDescription: item.description || '',
+                    parentFolder: item.parentFolder || 'root',
+                    assetType: type === 'folder' ? 'Folder' : 'File',
+                    driveLink: item.driveLink || 'javascript:void(0)'
+                };
+
+                try {
+                    const response = await fetch(BACKEND_API_URL, {
+                        method: "POST",
+                        body: JSON.stringify(completePayload)
+                    });
+                    const resData = await response.json();
+                    if (resData.status !== "SUCCESS") {
+                        console.warn("Storage rejected rename sync:", resData.message);
+                    }
+                } catch (err) {
+                    console.error("Rename cloud transmission bypass/failure:", err);
+                } finally {
+                    if (submitRenameBtn) {
+                        submitRenameBtn.disabled = false;
+                        submitRenameBtn.innerText = "EXECUTE RENAME";
+                    }
+                    closeRenameModal();
+                    fetchDatabase();
+                }
+            } else {
+                closeRenameModal();
+                renderVault();
+            }
         });
 
         // Direct Download Link helper Action
@@ -1387,8 +1471,7 @@
                         const payload = {
                             action: "delete",
                             id: doc.id,
-                            driveLink: doc.driveLink,
-                            assetType: "File"
+                            driveLink: doc.driveLink
                         };
                         deletePromises.push(
                             fetch(BACKEND_API_URL, {
@@ -1404,7 +1487,9 @@
                             action: "delete",
                             id: fold.id,
                             driveLink: fold.driveLink || "javascript:void(0)",
-                            assetType: "Folder"
+                            sheetName: "folders",
+                            sheet: "folders",
+                            targetSheet: "folders"
                         };
                         deletePromises.push(
                             fetch(BACKEND_API_URL, {
