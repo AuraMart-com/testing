@@ -1361,28 +1361,69 @@
             } else if (type === 'folder') {
                 const idsToDelete = getNestedItemsToDelete(targetId);
 
-                // Gather online cloud files from nested list to delete
+                // Gather files to delete
                 const filesToDelete = fileInventory.filter(item => idsToDelete.includes(item.id));
                 const onlineFiles = filesToDelete.filter(doc => doc.driveLink && !doc.driveLink.startsWith("data:"));
 
-                if (onlineFiles.length > 0 && BACKEND_API_URL && !BACKEND_API_URL.startsWith("PASTE_")) {
+                // Gather folders to delete
+                const foldersToDelete = folderInventory.filter(item => idsToDelete.includes(item.id));
+                
+                // Read local uploads to find which folders are purely offline local sandbox
+                let localUploads = [];
+                try {
+                    localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
+                } catch (err) {}
+                const localIds = localUploads.map(doc => doc.id);
+                const onlineFolders = foldersToDelete.filter(fold => !localIds.includes(fold.id));
+
+                const deletePromises = [];
+
+                if ((onlineFiles.length > 0 || onlineFolders.length > 0) && BACKEND_API_URL && !BACKEND_API_URL.startsWith("PASTE_")) {
                     submitBtn.disabled = true;
-                    submitBtn.innerText = `PURGING ${onlineFiles.length} CLOUD ASSET(S)...`;
-                    try {
-                        const deletePromises = onlineFiles.map(async (doc) => {
-                            const payload = {
-                                action: "delete",
-                                id: doc.id,
-                                driveLink: doc.driveLink
-                            };
-                            return fetch(BACKEND_API_URL, {
+                    submitBtn.innerText = `PURGING ${onlineFiles.length + onlineFolders.length} CLOUD ASSET(S)...`;
+                    
+                    // Queue file deletions
+                    onlineFiles.forEach(doc => {
+                        const payload = {
+                            action: "delete",
+                            id: doc.id,
+                            driveLink: doc.driveLink,
+                            assetType: "File"
+                        };
+                        deletePromises.push(
+                            fetch(BACKEND_API_URL, {
                                 method: "POST",
                                 body: JSON.stringify(payload)
-                            }).then(r => r.json());
-                        });
-                        await Promise.all(deletePromises);
+                            }).then(r => r.json()).catch(err => ({ status: "ERROR", message: err.message }))
+                        );
+                    });
+
+                    // Queue folder deletions
+                    onlineFolders.forEach(fold => {
+                        const payload = {
+                            action: "delete",
+                            id: fold.id,
+                            driveLink: fold.driveLink || "javascript:void(0)",
+                            assetType: "Folder"
+                        };
+                        deletePromises.push(
+                            fetch(BACKEND_API_URL, {
+                                method: "POST",
+                                body: JSON.stringify(payload)
+                            }).then(r => r.json()).catch(err => ({ status: "ERROR", message: err.message }))
+                        );
+                    });
+                }
+
+                if (deletePromises.length > 0) {
+                    try {
+                        const results = await Promise.all(deletePromises);
+                        const failures = results.filter(res => res.status !== "SUCCESS");
+                        if (failures.length > 0) {
+                            console.warn(`${failures.length} cloud assets failed to delete on the sheet.`, failures);
+                        }
                     } catch (err) {
-                        console.error("Some cloud folder assets failed to purge online:", err);
+                        console.error("Some cloud assets failed to purge online:", err);
                     } finally {
                         submitBtn.disabled = false;
                         submitBtn.innerText = "CONFIRM PURGE";
@@ -1390,13 +1431,13 @@
                 }
 
                 // 1. Remove from Local Storage and memory
-                let localUploads = [];
+                let finalLocalUploads = [];
                 try {
-                    localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
+                    finalLocalUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
                 } catch (err) {}
-                localUploads = localUploads.filter(doc => !idsToDelete.includes(doc.id));
+                finalLocalUploads = finalLocalUploads.filter(doc => !idsToDelete.includes(doc.id));
                 try {
-                    localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
+                    localStorage.setItem("vault_local_files", JSON.stringify(finalLocalUploads));
                 } catch (err) {}
 
                 fileInventory = fileInventory.filter(doc => !idsToDelete.includes(doc.id));
