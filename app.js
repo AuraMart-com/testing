@@ -6,14 +6,13 @@
 
         const DEFAULT_CATEGORIES = [];
         let documentInventory = [];
-        let currentPath = []; // Array of strings representing current folder path, e.g. ["Education", "2026"]
 
         // Real-world fallback assets so the sandbox workspace is fully populated right out of the gate
         const MOCK_SEEDS = [
-            { id: "VAL-1092", title: "Semester_Marksheet_V1.pdf", category: "", description: "Official college semester transcripts. Signed copy and degree logs.", driveLink: "javascript:alert('SECURED SANDBOX MODE: This is a fallback record. Upload custom files below!')" },
-            { id: "VAL-2201", title: "Admission_Fee_Receipt_2026.pdf", category: "", description: "Valid admission token fee details and receipt acknowledgment.", driveLink: "javascript:alert('SECURED SANDBOX MODE: This is a fallback record. Upload custom files below!')" },
-            { id: "VAL-8402", title: "UIDAI_Aadhaar_Verification.pdf", category: "", description: "Governing UIDAI digital identification proof token copy.", driveLink: "javascript:alert('SECURED SANDBOX MODE: This is a fallback record. Upload custom files below!')" },
-            { id: "VAL-3019", title: "Secure_Vault_Manifest.txt", category: "", description: "Operational tracking manifest detailing digital document indexing structures.", driveLink: "javascript:alert('SECURED SANDBOX MODE: This is a fallback record. Upload custom files below!')" }
+            { id: "VAL-1092", title: "Semester_Marksheet_V1.pdf", category: "Education", description: "Official college semester transcripts. Signed copy and degree logs.", driveLink: "javascript:alert('SECURED SANDBOX MODE: This is a fallback record. Upload custom files below!')", assetType: "File", parentFolder: "root" },
+            { id: "VAL-2201", title: "Admission_Fee_Receipt_2026.pdf", category: "Receipt", description: "Valid admission token fee details and receipt acknowledgment.", driveLink: "javascript:alert('SECURED SANDBOX MODE: This is a fallback record. Upload custom files below!')", assetType: "File", parentFolder: "root" },
+            { id: "VAL-8402", title: "UIDAI_Aadhaar_Verification.pdf", category: "Identification", description: "Governing UIDAI digital identification proof token copy.", driveLink: "javascript:alert('SECURED SANDBOX MODE: This is a fallback record. Upload custom files below!')", assetType: "File", parentFolder: "root" },
+            { id: "VAL-3019", title: "Secure_Vault_Manifest.txt", category: "Manifest", description: "Operational tracking manifest detailing digital document indexing structures.", driveLink: "javascript:alert('SECURED SANDBOX MODE: This is a fallback record. Upload custom files below!')", assetType: "File", parentFolder: "root" }
         ];
 
         // 1. Fetch data from Google Sheets CSV on load with offline safety fallback
@@ -147,90 +146,82 @@
                     obj[header] = value;
                 });
                 
-                // Map to its local folder structure, defaulting to Root
-                obj.folderPath = sheetFolderMap[obj.id] || "";
+                // Normalize to new database model
+                obj.id = obj.id || ("VAL-" + Math.floor(1000 + Math.random() * 9000));
+                obj.title = obj.title || "Unidentified Asset";
+                obj.category = obj.category || "Other";
+                obj.description = obj.description || "";
+                obj.driveLink = obj.driveLink || "javascript:void(0)";
+                
+                // Map folder structures, defaulting to root
+                obj.parentFolder = obj.parentFolder || sheetFolderMap[obj.id] || "root";
+
+                // Ensure assetType is parsed/deduced properly
+                if (obj.assetType) {
+                    const normType = obj.assetType.trim().toLowerCase();
+                    if (normType === 'folder' || obj.fileType === 'application/x-folder' || obj.fileBase64 === 'EMPTY_FOLDER' || obj.fileBase64 === 'DIRECTORY_ENTRY') {
+                        obj.assetType = 'Folder';
+                    } else {
+                        obj.assetType = 'File';
+                    }
+                } else {
+                    if (obj.category === 'Directory' || obj.fileType === 'application/x-folder' || obj.fileBase64 === 'EMPTY_FOLDER' || obj.fileBase64 === 'DIRECTORY_ENTRY') {
+                        obj.assetType = 'Folder';
+                    } else {
+                        obj.assetType = 'File';
+                    }
+                }
+
                 documentInventory.push(obj);
             }
         }
 
-        // Directory contents builder
-        function getDirectoryContents() {
-            const folders = new Map(); // name -> { fileCount: 0 }
-            const files = [];
-
-            // Add standard default categories if we are in Root level
-            if (currentPath.length === 0) {
-                DEFAULT_CATEGORIES.forEach(cat => {
-                    folders.set(cat, { fileCount: 0 });
-                });
-            }
-
-            // Fetch custom folders from localStorage to preserve empty state
-            let emptyFolders = [];
-            try {
-                emptyFolders = JSON.parse(localStorage.getItem("vault_custom_empty_folders")) || [];
-            } catch (e) {
-                emptyFolders = [];
-            }
-
-            // Filter and register empty folders relevant under the currentPath
-            emptyFolders.forEach(pathStr => {
-                const parts = pathStr.split("/");
-                if (parts.length === currentPath.length + 1) {
-                    const isDirectSub = currentPath.every((val, idx) => val === parts[idx]);
-                    if (isDirectSub) {
-                        const folderName = parts[parts.length - 1];
-                        if (!folders.has(folderName)) {
-                            folders.set(folderName, { fileCount: 0 });
-                        }
-                    }
-                }
-            });
-
-            // Group existing files from Google Sheets or local uploads using the folderPath parameter
-            documentInventory.forEach(doc => {
-                const folderPathStr = doc.folderPath ? doc.folderPath.trim() : "";
-                const parts = folderPathStr ? folderPathStr.split("/") : [];
-
-                // Is it exactly in the current directory?
-                const isDirectFile = (parts.length === currentPath.length) && parts.every((val, idx) => val === currentPath[idx]);
-
-                if (isDirectFile) {
-                    files.push(doc);
-                } else if (parts.length > currentPath.length) {
-                    // Is it a child folder or nested underneath?
-                    const isSubPath = currentPath.every((val, idx) => val === parts[idx]);
-                    if (isSubPath) {
-                        const directSubName = parts[currentPath.length];
-                        if (directSubName) {
-                            if (!folders.has(directSubName)) {
-                                folders.set(directSubName, { fileCount: 0 });
-                            }
-                            folders.get(directSubName).fileCount++;
-                        }
-                    }
-                }
-            });
-
-            return {
-                folders: Array.from(folders.entries()).map(([name, data]) => ({ name, fileCount: data.fileCount })),
-                files: files
-            };
+        // Helper to check folder details
+        function getActiveFolderName(folderId) {
+            if (folderId === 'root') return 'Root';
+            const folderDoc = documentInventory.find(item => item.id === folderId && item.assetType === 'Folder');
+            return folderDoc ? folderDoc.title : 'Unidentified Folder';
         }
 
-        // Render breadcrumbs navigation row
+        // Folder file/item count helper
+        function getFolderFileCount(folderId) {
+            return documentInventory.filter(item => {
+                const parent = item.parentFolder || 'root';
+                return parent === folderId;
+            }).length;
+        }
+
+        // Render breadcrumbs navigation row traversed upwards from activeFolderId
         function renderBreadcrumbs() {
             const container = document.getElementById('breadcrumbs');
             if (!container) return;
 
-            let markup = `<span class="breadcrumb-item" onclick="navigateBreadcrumb(-1)">📁 ROOT</span>`;
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeFolderId = urlParams.get('folder') || 'root';
 
-            currentPath.forEach((folderName, index) => {
-                markup += ` <span class="breadcrumb-separator">/</span> `;
-                if (index === currentPath.length - 1) {
-                    markup += `<span class="breadcrumb-current">${folderName.toUpperCase()}</span>`;
+            const trail = [];
+            let currentId = activeFolderId;
+            let loopGuard = 0;
+
+            while (currentId && currentId !== 'root' && loopGuard < 50) {
+                loopGuard++;
+                const folderDoc = documentInventory.find(item => item.id === currentId && item.assetType === 'Folder');
+                if (folderDoc) {
+                    trail.unshift(folderDoc);
+                    currentId = folderDoc.parentFolder || 'root';
                 } else {
-                    markup += `<span class="breadcrumb-item" onclick="navigateBreadcrumb(${index})">${folderName.toUpperCase()}</span>`;
+                    break;
+                }
+            }
+
+            let markup = `<span class="breadcrumb-item" onclick="window.location.search = '?folder=root'">📁 ROOT</span>`;
+
+            trail.forEach((folderDoc, index) => {
+                markup += ` <span class="breadcrumb-separator">/</span> `;
+                if (index === trail.length - 1) {
+                    markup += `<span class="breadcrumb-current">${folderDoc.title.toUpperCase()}</span>`;
+                } else {
+                    markup += `<span class="breadcrumb-item" onclick="window.location.search = '?folder=' + encodeURIComponent('${folderDoc.id}')">${folderDoc.title.toUpperCase()}</span>`;
                 }
             });
 
@@ -238,36 +229,22 @@
         }
 
         // Navigation actions
-        window.openFolder = function(folderName) {
-            currentPath.push(folderName);
-            // Clear searchbox so we view the clean folder contents
-            document.getElementById('searchBox').value = "";
-            renderVault();
-        };
-
-        window.navigateBreadcrumb = function(index) {
-            if (index === -1) {
-                currentPath = [];
-            } else {
-                currentPath = currentPath.slice(0, index + 1);
-            }
-            // Clear searchbox on navigation change
-            document.getElementById('searchBox').value = "";
-            renderVault();
+        window.openFolder = function(folderId) {
+            window.location.search = '?folder=' + encodeURIComponent(folderId);
         };
 
         window.navigateHome = function() {
-            currentPath = [];
-            document.getElementById('searchBox').value = "";
-            renderVault();
+            window.location.search = '?folder=root';
         };
 
         window.navigateBack = function() {
-            if (currentPath.length > 0) {
-                currentPath.pop();
-                document.getElementById('searchBox').value = "";
-                renderVault();
-            }
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeFolderId = urlParams.get('folder') || 'root';
+            if (activeFolderId === 'root') return;
+
+            const folderDoc = documentInventory.find(item => item.id === activeFolderId && item.assetType === 'Folder');
+            const parentId = folderDoc ? (folderDoc.parentFolder || 'root') : 'root';
+            window.location.search = '?folder=' + encodeURIComponent(parentId);
         };
 
         window.refreshDatabase = async function() {
@@ -276,7 +253,6 @@
                 refreshBtn.classList.add('loading');
             }
             try {
-                // Fetch and update the directory metadata index asynchronously, keeping browser and app state
                 await fetchDatabase();
             } catch (e) {
                 console.error("Database query sync failed:", e);
@@ -293,14 +269,17 @@
             grid.innerHTML = "";
             const term = filterTerm.toLowerCase().trim();
 
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeFolderId = urlParams.get('folder') || 'root';
+
             // Dynamic nav controls button state updating
             const homeBtn = document.getElementById('navHomeBtn');
             const backBtn = document.getElementById('navBackBtn');
             if (homeBtn) {
-                homeBtn.disabled = (currentPath.length === 0);
+                homeBtn.disabled = (activeFolderId === 'root');
             }
             if (backBtn) {
-                backBtn.disabled = (currentPath.length === 0);
+                backBtn.disabled = (activeFolderId === 'root');
             }
 
             // Sync clipboard indicator UI
@@ -308,7 +287,7 @@
                 updateClipboardUI();
             }
 
-            // If searched, flat render ALL matching records
+            // If searched, flat render ALL matching records globally
             if (term.length > 0) {
                 // Hide breadcrumbs container when searching globally
                 document.getElementById('breadcrumbs').style.display = 'none';
@@ -329,16 +308,22 @@
                     card.className = 'doc-card';
                     card.onclick = (e) => {
                         if (e.target.closest('.card-options-container')) return;
-                        openFileSystemFile(doc.driveLink, doc.title);
+                        if (doc.assetType === 'Folder') {
+                            window.location.search = '?folder=' + encodeURIComponent(doc.id);
+                        } else {
+                            openFileSystemFile(doc.driveLink, doc.title);
+                        }
                     };
+                    const isFold = doc.assetType === 'Folder';
+                    const parentName = getActiveFolderName(doc.parentFolder || 'root');
                     card.innerHTML = `
-                        <div class="file-icon">📄</div>
+                        <div class="${isFold ? 'folder' : 'file'}-icon">${isFold ? '📁' : '📄'}</div>
                         <div class="doc-meta" style="flex: 1;">
                             <h3>${doc.title || "Unidentified Asset"}</h3>
                             <p><strong>Tracking Registry:</strong> ${doc.id || "N/A"}</p>
                             ${doc.category ? `<p><strong>Category Tag:</strong> ${doc.category}</p>` : ""}
                             <p><strong>Description:</strong> ${doc.description || "None"}</p>
-                            <span class="tag-pill">📂 ${doc.folderPath ? doc.folderPath.replace(/\//g, " / ") : "Root"}</span>
+                            <span class="tag-pill">📂 ${parentName}</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div class="card-options-container" onclick="event.stopPropagation()">
@@ -346,11 +331,11 @@
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle></svg>
                                 </button>
                                 <div id="match-${doc.id}-menu" class="options-dropdown-menu">
-                                    <button class="options-dropdown-item" onclick="viewDetails(event, 'file', '${doc.id}')">🔬 Details</button>
-                                    <button class="options-dropdown-item" onclick="copyItem(event, 'file', '${doc.id}')">📋 Copy</button>
-                                    <button class="options-dropdown-item" onclick="triggerRename(event, 'file', '${doc.id}')">✏️ Rename</button>
-                                    <button class="options-dropdown-item" onclick="downloadFileDirectly(event, '${doc.id}')">💾 Download</button>
-                                    <button class="options-dropdown-item delete-item" onclick="triggerDelete(event, 'file', '${doc.id}')">🗑️ Delete</button>
+                                    <button class="options-dropdown-item" onclick="viewDetails(event, '${isFold ? 'folder' : 'file'}', '${doc.id}')">🔬 Details</button>
+                                    <button class="options-dropdown-item" onclick="copyItem(event, '${isFold ? 'folder' : 'file'}', '${doc.id}')">📋 Copy</button>
+                                    <button class="options-dropdown-item" onclick="triggerRename(event, '${isFold ? 'folder' : 'file'}', '${doc.id}')">✏️ Rename</button>
+                                    ${!isFold ? `<button class="options-dropdown-item" onclick="downloadFileDirectly(event, '${doc.id}')">💾 Download</button>` : ''}
+                                    <button class="options-dropdown-item delete-item" onclick="triggerDelete(event, '${isFold ? 'folder' : 'file'}', '${doc.id}')">🗑️ Delete</button>
                                 </div>
                             </div>
                         </div>
@@ -360,40 +345,48 @@
                 return;
             }
 
-            // Normal Folder View navigation
+            // Normal Folder View navigation (Filtered using active folder parameters)
             document.getElementById('breadcrumbs').style.display = 'flex';
             renderBreadcrumbs();
 
-            const contents = getDirectoryContents();
+            // Display ONLY items whose parentFolder matches our active folder parameter ID exactly
+            const contents = documentInventory.filter(item => {
+                const parent = item.parentFolder || 'root';
+                return parent === activeFolderId;
+            });
 
-            if (contents.folders.length === 0 && contents.files.length === 0) {
+            const folders = contents.filter(item => item.assetType === 'Folder');
+            const files = contents.filter(item => item.assetType === 'File' || !item.assetType);
+
+            if (folders.length === 0 && files.length === 0) {
                 grid.innerHTML = `<p style="color: var(--text-muted); padding: 20px 0;">THIS FOLDER IS CURRENTLY EMPTY.</p>`;
                 return;
             }
 
             // 1. Render subfolders
-            contents.folders.forEach(fold => {
+            folders.forEach(fold => {
+                const fileCount = getFolderFileCount(fold.id);
                 const card = document.createElement('div');
                 card.className = 'folder-card';
                 card.onclick = (e) => {
                     if (e.target.closest('.card-options-container')) return;
-                    openFolder(fold.name);
+                    window.location.search = '?folder=' + encodeURIComponent(fold.id);
                 };
                 card.innerHTML = `
                     <div class="folder-icon">📁</div>
                     <div class="folder-meta">
-                        <h3>${fold.name}</h3>
-                        <p>${fold.fileCount} ${fold.fileCount === 1 ? 'file' : 'files'}</p>
+                        <h3>${fold.title}</h3>
+                        <p>${fileCount} ${fileCount === 1 ? 'item' : 'items'}</p>
                     </div>
                     <div class="card-options-container" onclick="event.stopPropagation()">
-                        <button class="card-options-btn" onclick="toggleCardOptions(event, 'fold-${fold.name}')" title="More options">
+                        <button class="card-options-btn" onclick="toggleCardOptions(event, 'fold-${fold.id}')" title="More options">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle></svg>
                         </button>
-                        <div id="fold-${fold.name}-menu" class="options-dropdown-menu">
-                            <button class="options-dropdown-item" onclick="viewDetails(event, 'folder', null, '${fold.name}')">🔬 Details</button>
-                            <button class="options-dropdown-item" onclick="copyItem(event, 'folder', null, '${fold.name}')">📋 Copy</button>
-                            <button class="options-dropdown-item" onclick="triggerRename(event, 'folder', null, '${fold.name}')">✏️ Rename</button>
-                            <button class="options-dropdown-item delete-item" onclick="triggerDelete(event, 'folder', null, '${fold.name}')">🗑️ Delete</button>
+                        <div id="fold-${fold.id}-menu" class="options-dropdown-menu">
+                            <button class="options-dropdown-item" onclick="viewDetails(event, 'folder', '${fold.id}')">🔬 Details</button>
+                            <button class="options-dropdown-item" onclick="copyItem(event, 'folder', '${fold.id}')">📋 Copy</button>
+                            <button class="options-dropdown-item" onclick="triggerRename(event, 'folder', '${fold.id}')">✏️ Rename</button>
+                            <button class="options-dropdown-item delete-item" onclick="triggerDelete(event, 'folder', '${fold.id}')">🗑️ Delete</button>
                         </div>
                     </div>
                 `;
@@ -401,7 +394,7 @@
             });
 
             // 2. Render files
-            contents.files.forEach(doc => {
+            files.forEach(doc => {
                 const card = document.createElement('div');
                 card.className = 'doc-card';
                 card.onclick = (e) => {
@@ -415,7 +408,7 @@
                         <p><strong>Tracking Registry:</strong> ${doc.id || "N/A"}</p>
                         ${doc.category ? `<p><strong>Category Tag:</strong> ${doc.category}</p>` : ""}
                         <p><strong>Description:</strong> ${doc.description || "None"}</p>
-                        <span class="tag-pill">📂 ${currentPath.join(" / ") || "Root"}</span>
+                        <span class="tag-pill">📂 ${getActiveFolderName(activeFolderId)}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <div class="card-options-container" onclick="event.stopPropagation()">
@@ -442,10 +435,12 @@
             const categoryDisplay = document.getElementById('fileCategoryDisplay');
             if (!categoryInput) return;
 
-            const pathStr = currentPath.join("/");
-            categoryInput.value = pathStr; // can be empty string for Root
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeFolderId = urlParams.get('folder') || 'root';
+
+            categoryInput.value = activeFolderId;
             if (categoryDisplay) {
-                categoryDisplay.value = pathStr ? `📁 ${pathStr.replace(/\//g, " / ")}` : "📁 ROOT";
+                categoryDisplay.value = activeFolderId === 'root' ? "📁 ROOT" : ("📁 " + getActiveFolderName(activeFolderId).toUpperCase());
             }
         }
 
@@ -454,26 +449,32 @@
             const sanitized = folderName.replace(/\//g, "").trim();
             if (!sanitized) return;
 
-            const fullPathStr = currentPath.length > 0 ? [...currentPath, sanitized].join("/") : sanitized;
+            const urlParams = new URLSearchParams(window.location.search);
+            const parentId = urlParams.get('folder') || 'root';
 
-            let emptyFolders = [];
-            try {
-                emptyFolders = JSON.parse(localStorage.getItem("vault_custom_empty_folders")) || [];
-            } catch (e) {
-                emptyFolders = [];
+            const payload = {
+                fileName: sanitized,
+                fileType: 'application/x-folder',
+                fileCategory: 'Directory',
+                fileDescription: 'Virtual folder partition created via UI folder provisioner',
+                fileBase64: 'EMPTY_FOLDER',
+                parentFolder: parentId,
+                assetType: 'Folder'
+            };
+
+            const submitFolderBtn = document.getElementById('submitFolderBtn');
+            if (submitFolderBtn) {
+                submitFolderBtn.disabled = true;
+                submitFolderBtn.innerText = "PROVISIONING...";
             }
 
-            if (!emptyFolders.includes(fullPathStr)) {
-                emptyFolders.push(fullPathStr);
-                localStorage.setItem("vault_custom_empty_folders", JSON.stringify(emptyFolders));
-            }
-
-            // Immediately step inside the newly provisioned directory
-            openFolder(sanitized);
+            transmitToCloud(payload, submitFolderBtn || { disabled: false, innerText: "" }).then(() => {
+                closeFolderModal();
+            });
         }
 
         // Saves uploaded documents directly into our persistent local storage vault
-        function saveLocalUpload(name, type, category, folderPath, description, base64Data) {
+        function saveLocalUpload(name, type, category, parentFolder, description, base64Data, assetType = 'File') {
             let localUploads = [];
             try {
                 localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
@@ -482,28 +483,21 @@
             }
             
             const newId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
-            const dataUrl = `data:${type};base64,${base64Data}`;
+            const dataUrl = assetType === 'Folder' ? 'javascript:void(0)' : `data:${type};base64,${base64Data}`;
             
             const newDoc = {
                 id: newId,
                 title: name,
                 category: category,
-                folderPath: folderPath,
+                parentFolder: parentFolder || 'root',
                 description: description,
-                driveLink: dataUrl // clicking Pull Copy triggers directly downloading or displaying the actual data!
+                driveLink: dataUrl,
+                assetType: assetType
             };
             
             localUploads.push(newDoc);
             localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
             
-            // Map the folder position locally
-            try {
-                let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
-                sheetFolderMap[newId] = folderPath;
-                sheetFolderMap[name] = folderPath;
-                localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
-            } catch (err) {}
-
             // Append and merge into the active memory inventory
             const exists = documentInventory.some(doc => doc.id === newId);
             if (!exists) {
@@ -517,48 +511,30 @@
             const customName = payload.fileName;
             const categoryTag = payload.fileCategory;
             const description = payload.fileDescription || document.getElementById('fileDescription').value;
-            const folderPath = document.getElementById('fileCategory').value;
-            const isFolder = payload.fileBase64 === 'EMPTY_FOLDER';
-
-            // Store folder location map in advance so it syncs up nicely on refresh
-            try {
-                let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
-                sheetFolderMap[customName] = folderPath;
-                localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
-            } catch (e) {}
-
-            if (isFolder) {
-                // Register empty folder locally to display it immediately
-                try {
-                    const fullPathStr = folderPath ? `${folderPath}/${customName}` : customName;
-                    let emptyFolders = JSON.parse(localStorage.getItem("vault_custom_empty_folders")) || [];
-                    if (!emptyFolders.includes(fullPathStr)) {
-                        emptyFolders.push(fullPathStr);
-                        localStorage.setItem("vault_custom_empty_folders", JSON.stringify(emptyFolders));
-                    }
-                } catch (e) {}
-            }
+            const parentFolderId = payload.parentFolder || document.getElementById('fileCategory').value || 'root';
+            const assetType = payload.assetType || (payload.fileBase64 === 'EMPTY_FOLDER' ? 'Folder' : 'File');
 
             try {
                 if (!BACKEND_API_URL || BACKEND_API_URL.startsWith("PASTE_")) {
                     throw new Error("Apps Script URL unconfigured");
                 }
 
+                // Compile the payload exactly with the columns
+                const completePayload = {
+                    ...payload,
+                    parentFolder: parentFolderId,
+                    assetType: assetType,
+                    fileCategory: assetType === 'Folder' ? 'Directory' : categoryTag
+                };
+
                 const response = await fetch(BACKEND_API_URL, {
                     method: "POST",
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(completePayload)
                 });
                 const resData = await response.json();
 
                 if (resData.status === "SUCCESS") {
-                    if (resData.id) {
-                        try {
-                            let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
-                            sheetFolderMap[resData.id] = folderPath;
-                            localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
-                        } catch (e) {}
-                    }
-                    if (isFolder) {
+                    if (assetType === 'Folder') {
                         alert("Secure fold sync confirmed! Folder registered in sheets database.");
                     } else {
                         alert("Secure sync confirmed! Row written to sheet and file deposited in Drive.");
@@ -570,36 +546,15 @@
                     throw new Error(resData.message || "Storage rejected transmission");
                 }
             } catch(error) {
-                if (isFolder) {
+                if (assetType === 'Folder') {
                     console.warn("Cloud transmission bypassed. Storing folder locally inside Secured Sandboxed storage:", error);
-                    
-                    const newId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
-                    const newDoc = {
-                        id: newId,
-                        title: customName,
-                        category: categoryTag,
-                        folderPath: folderPath,
-                        description: description,
-                        driveLink: "javascript:void(0)"
-                    };
-                    
-                    let localUploads = [];
-                    try {
-                        localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
-                    } catch(e) {}
-                    localUploads.push(newDoc);
-                    localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
-                    
+                    saveLocalUpload(customName, 'application/x-folder', 'Directory', parentFolderId, description, 'EMPTY_FOLDER', 'Folder');
                     alert("Local sandbox sync verified! Folder successfully indexed and saved to secure offline local storage.");
                     closeModal();
                     document.getElementById('uploadForm').reset();
-                    renderVault();
                 } else {
                     console.warn("Cloud transmission bypassed. Storing locally inside Secured Sandboxed storage:", error);
-                    
-                    // Save document metadata and physical payload directly into localStorage index
-                    saveLocalUpload(customName, payload.fileType || "application/octet-stream", categoryTag, folderPath, description, payload.fileBase64);
-                    
+                    saveLocalUpload(customName, payload.fileType || "application/octet-stream", categoryTag, parentFolderId, description, payload.fileBase64, 'File');
                     alert("Local sandbox sync verified! Document successfully indexed and saved to secure offline local storage.");
                     closeModal();
                     document.getElementById('uploadForm').reset();
@@ -621,10 +576,12 @@
             const assetTypeEl = document.getElementById('assetType');
             const assetType = assetTypeEl ? assetTypeEl.value : (file ? 'File' : 'Folder');
             
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeFolderId = urlParams.get('folder') || 'root';
+
             if (assetType === 'Folder') {
                 const customName = document.getElementById('fileNameInput').value.trim() || "New Folder";
                 const description = document.getElementById('fileDescription').value;
-                const currentFolderId = currentPath.length > 0 ? currentPath[currentPath.length - 1] : "Root";
 
                 const payload = {
                     fileName: customName,
@@ -632,7 +589,8 @@
                     fileCategory: 'Directory',
                     fileDescription: description,
                     fileBase64: 'EMPTY_FOLDER',
-                    parentFolder: currentFolderId
+                    parentFolder: activeFolderId,
+                    assetType: 'Folder'
                 };
 
                 submitBtn.disabled = true;
@@ -661,7 +619,9 @@
                         fileType: file.type,
                         fileCategory: categoryTag, // Written to the 'category' sheet column
                         fileDescription: description,
-                        fileBase64: base64String
+                        fileBase64: base64String,
+                        parentFolder: activeFolderId,
+                        assetType: 'File'
                     };
 
                     await transmitToCloud(payload, submitBtn);
@@ -1090,7 +1050,7 @@
         };
 
         // Modal Action: SHOW METADATA DETAILS
-        window.viewDetails = function(event, type, id, folderName) {
+        window.viewDetails = function(event, type, id) {
             if (event) event.stopPropagation();
             
             // Close opened context menu dropdowns
@@ -1102,11 +1062,11 @@
             if (!contentEl) return;
 
             if (type === 'folder') {
-                const folderPath = currentPath.join("/") + (currentPath.length > 0 ? "/" : "") + folderName;
-                const count = documentInventory.filter(doc => {
-                    const cat = doc.category || "";
-                    return cat === folderPath || cat.startsWith(folderPath + "/");
-                }).length;
+                const folderDoc = documentInventory.find(item => item.id === id);
+                const title = folderDoc ? folderDoc.title : "Unidentified Folder";
+                const parent = folderDoc ? (folderDoc.parentFolder || 'root') : 'root';
+                const parentPathName = getActiveFolderName(parent);
+                const count = getFolderFileCount(id);
 
                 contentEl.innerHTML = `
                     <div class="details-row">
@@ -1115,15 +1075,15 @@
                     </div>
                     <div class="details-row">
                         <span class="details-key">Folder Name</span>
-                        <span class="details-val" style="font-weight: bold; color: var(--accent);">${folderName}</span>
+                        <span class="details-val" style="font-weight: bold; color: var(--accent);">${title}</span>
                     </div>
                     <div class="details-row">
-                        <span class="details-key">Registry Path</span>
-                        <span class="details-val">${folderPath.replace(/\//g, " / ")}</span>
+                        <span class="details-key">Parent Folder</span>
+                        <span class="details-val">${parentPathName}</span>
                     </div>
                     <div class="details-row">
                         <span class="details-key">Document Count</span>
-                        <span class="details-val">${count} index(es) recorded in this directory branch</span>
+                        <span class="details-val">${count} item(s) index(es) recorded in this folder</span>
                     </div>
                     <div class="details-row">
                         <span class="details-key">Operational Class</span>
@@ -1173,7 +1133,7 @@
         };
 
         // Modal Action: INITIATE RENAME PROMPT
-        window.triggerRename = function(event, type, id, folderName) {
+        window.triggerRename = function(event, type, id) {
             if (event) event.stopPropagation();
 
             // Close context menu dropdowns
@@ -1185,16 +1145,16 @@
             const renameLabel = document.getElementById('renameLabel');
             
             document.getElementById('renameTargetType').value = type;
-            document.getElementById('renameTargetId').value = (type === 'folder' ? folderName : id);
+            document.getElementById('renameTargetId').value = id;
+
+            const doc = documentInventory.find(item => item.id === id);
+            const oldTitle = doc ? doc.title : "";
+            document.getElementById('renameTargetOldName').value = oldTitle;
 
             if (type === 'folder') {
-                document.getElementById('renameTargetOldName').value = folderName;
                 renameLabel.innerText = "NEW FOLDER NAME";
-                if (renameInput) renameInput.value = folderName;
+                if (renameInput) renameInput.value = oldTitle;
             } else {
-                const doc = documentInventory.find(item => item.id === id);
-                const oldTitle = doc ? doc.title : "";
-                document.getElementById('renameTargetOldName').value = oldTitle;
                 renameLabel.innerText = "NEW DOCUMENT FILENAME";
                 if (renameInput) renameInput.value = oldTitle;
             }
@@ -1213,75 +1173,28 @@
             e.preventDefault();
             const type = document.getElementById('renameTargetType').value;
             const targetId = document.getElementById('renameTargetId').value;
-            const oldName = document.getElementById('renameTargetOldName').value;
             const newName = document.getElementById('renameInput').value.trim();
 
             if (!newName) return;
 
-            if (type === 'folder') {
-                const oldFolderPath = currentPath.join("/") + (currentPath.length > 0 ? "/" : "") + oldName;
-                const newFolderPath = currentPath.join("/") + (currentPath.length > 0 ? "/" : "") + newName;
+            // 1. Update localStorage uploads
+            let localUploads = [];
+            try {
+                localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
+            } catch (err) {}
+            localUploads.forEach(doc => {
+                if (doc.id === targetId) {
+                    doc.title = newName;
+                }
+            });
+            localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
 
-                // 1. Update empty folders array
-                let emptyFolders = [];
-                try {
-                    emptyFolders = JSON.parse(localStorage.getItem("vault_custom_empty_folders")) || [];
-                } catch (err) {}
-                emptyFolders = emptyFolders.map(p => {
-                    if (p === oldFolderPath) {
-                        return newFolderPath;
-                    } else if (p.startsWith(oldFolderPath + "/")) {
-                        return newFolderPath + p.substring(oldFolderPath.length);
-                    }
-                    return p;
-                });
-                localStorage.setItem("vault_custom_empty_folders", JSON.stringify(emptyFolders));
-
-                // 2. Update local files array categories
-                let localUploads = [];
-                try {
-                    localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
-                } catch (err) {}
-                localUploads.forEach(doc => {
-                    const cat = doc.category || "";
-                    if (cat === oldFolderPath) {
-                        doc.category = newFolderPath;
-                    } else if (cat.startsWith(oldFolderPath + "/")) {
-                        doc.category = newFolderPath + cat.substring(oldFolderPath.length);
-                    }
-                });
-                localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
-
-                // 3. Update memory document inventory categories
-                documentInventory.forEach(doc => {
-                    const cat = doc.category || "";
-                    if (cat === oldFolderPath) {
-                        doc.category = newFolderPath;
-                    } else if (cat.startsWith(oldFolderPath + "/")) {
-                        doc.category = newFolderPath + cat.substring(oldFolderPath.length);
-                    }
-                });
-
-            } else if (type === 'file') {
-                // 1. Update localStorage uploads title
-                let localUploads = [];
-                try {
-                    localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
-                } catch (err) {}
-                localUploads.forEach(doc => {
-                    if (doc.id === targetId) {
-                        doc.title = newName;
-                    }
-                });
-                localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
-
-                // 2. Update memory document inventory title
-                documentInventory.forEach(doc => {
-                    if (doc.id === targetId) {
-                        doc.title = newName;
-                    }
-                });
-            }
+            // 2. Update memory document inventory title
+            documentInventory.forEach(doc => {
+                if (doc.id === targetId) {
+                    doc.title = newName;
+                }
+            });
 
             closeRenameModal();
             renderVault();
@@ -1303,7 +1216,7 @@
         };
 
         // Modal Action: INITIATE DELETE WARNING DIALOG
-        window.triggerDelete = function(event, type, id, folderName) {
+        window.triggerDelete = function(event, type, id) {
             if (event) event.stopPropagation();
 
             // Close context menu dropdowns
@@ -1312,14 +1225,15 @@
             });
 
             document.getElementById('deleteTargetType').value = type;
-            document.getElementById('deleteTargetId').value = (type === 'folder' ? folderName : id);
+            document.getElementById('deleteTargetId').value = id;
 
             const promptEl = document.getElementById('deletePromptMessage');
+            const doc = documentInventory.find(item => item.id === id);
+            const title = doc ? doc.title : "Unidentified Asset";
+
             if (type === 'folder') {
-                promptEl.innerHTML = `You are about to initiate an offline system purge sequence for folder <strong style="color: var(--accent);">${folderName}</strong> and ALL nested subfolders or documents contained inside it.`;
+                promptEl.innerHTML = `You are about to initiate an offline system purge sequence for folder <strong style="color: var(--accent);">${title}</strong> and ALL nested subfolders or documents contained inside it.`;
             } else {
-                const doc = documentInventory.find(item => item.id === id);
-                const title = doc ? doc.title : "Unidentified Asset";
                 promptEl.innerHTML = `You are about to initiate an offline system purge sequence for document <strong style="color: var(--accent);">${title}</strong> (Registry index: ${id}).`;
             }
 
@@ -1330,6 +1244,23 @@
             document.getElementById('deleteModal').classList.remove('active');
             document.getElementById('deleteForm').reset();
         };
+
+        // Recursive child item lookup helper
+        function getNestedItemsToDelete(folderId) {
+            const resultIds = new Set([folderId]);
+            let previousSize = 0;
+
+            while (previousSize !== resultIds.size) {
+                previousSize = resultIds.size;
+                documentInventory.forEach(item => {
+                    if (item.parentFolder && resultIds.has(item.parentFolder)) {
+                        resultIds.add(item.id);
+                    }
+                });
+            }
+
+            return Array.from(resultIds);
+        }
 
         // Handle delete wipe submissions
         document.getElementById('deleteForm').addEventListener('submit', async function(e) {
@@ -1379,24 +1310,12 @@
                 // 2. Remove files matching matching ID from memory inventory
                 documentInventory = documentInventory.filter(doc => doc.id !== targetId);
 
-                // 3. Clear from folders mapping
-                try {
-                    let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
-                    delete sheetFolderMap[targetId];
-                    localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
-                } catch (err) {}
-
             } else if (type === 'folder') {
-                const targetPath = currentPath.join("/") + (currentPath.length > 0 ? "/" : "") + targetId;
+                const idsToDelete = getNestedItemsToDelete(targetId);
 
-                // Gather all nested documents underneath this folder branch
-                const filesToDelete = documentInventory.filter(doc => {
-                    const folder = doc.folderPath || "";
-                    return folder === targetPath || folder.startsWith(targetPath + "/");
-                });
-
-                // Retrieve all subset files that live on the cloud Drive
-                const onlineFiles = filesToDelete.filter(doc => doc.driveLink && !doc.driveLink.startsWith("data:"));
+                // Gather online cloud files from nested list to delete
+                const filesToDelete = documentInventory.filter(item => idsToDelete.includes(item.id));
+                const onlineFiles = filesToDelete.filter(doc => doc.assetType === 'File' && doc.driveLink && !doc.driveLink.startsWith("data:"));
 
                 if (onlineFiles.length > 0 && BACKEND_API_URL && !BACKEND_API_URL.startsWith("PASTE_")) {
                     submitBtn.disabled = true;
@@ -1422,42 +1341,15 @@
                     }
                 }
 
-                // 1. Remove from empty folders array
-                let emptyFolders = [];
-                try {
-                    emptyFolders = JSON.parse(localStorage.getItem("vault_custom_empty_folders")) || [];
-                } catch (err) {}
-                emptyFolders = emptyFolders.filter(p => p !== targetPath && !p.startsWith(targetPath + "/"));
-                localStorage.setItem("vault_custom_empty_folders", JSON.stringify(emptyFolders));
-
-                // 2. Remove files under this folder path from Local Storage
+                // 1. Remove from Local Storage and memory
                 let localUploads = [];
                 try {
                     localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
                 } catch (err) {}
-                localUploads = localUploads.filter(doc => {
-                    const folder = doc.folderPath || "";
-                    return folder !== targetPath && !folder.startsWith(targetPath + "/");
-                });
+                localUploads = localUploads.filter(doc => !idsToDelete.includes(doc.id));
                 localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
 
-                // 3. Remove files under this folder path from memory inventory
-                documentInventory = documentInventory.filter(doc => {
-                    const folder = doc.folderPath || "";
-                    return folder !== targetPath && !folder.startsWith(targetPath + "/");
-                });
-
-                // 4. Remove folder entries from folder path mapping
-                try {
-                    let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
-                    for (const key in sheetFolderMap) {
-                        const folder = sheetFolderMap[key] || "";
-                        if (folder === targetPath || folder.startsWith(targetPath + "/")) {
-                            delete sheetFolderMap[key];
-                        }
-                    }
-                    localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
-                } catch (err) {}
+                documentInventory = documentInventory.filter(doc => !idsToDelete.includes(doc.id));
             }
 
             closeDeleteModal();
@@ -1498,7 +1390,7 @@
             }
         };
 
-        window.copyItem = function(event, type, id, folderName) {
+        window.copyItem = function(event, type, id) {
             if (event) event.stopPropagation();
 
             // Close context menu dropdowns
@@ -1506,24 +1398,14 @@
                 menu.classList.remove('active');
             });
 
-            if (type === 'file') {
-                const doc = documentInventory.find(item => item.id === id);
-                if (!doc) return;
-                clipboard = {
-                    type: 'file',
-                    id: doc.id,
-                    name: doc.title,
-                    sourcePath: doc.folderPath || ""
-                };
-            } else if (type === 'folder') {
-                const folderPath = currentPath.join("/") + (currentPath.length > 0 ? "/" : "") + folderName;
-                clipboard = {
-                    type: 'folder',
-                    id: folderName,
-                    name: folderName,
-                    sourcePath: folderPath
-                };
-            }
+            const doc = documentInventory.find(item => item.id === id);
+            if (!doc) return;
+
+            clipboard = {
+                type: type, // 'file' or 'folder'
+                id: doc.id,
+                name: doc.title
+            };
 
             localStorage.setItem("vault_clipboard_storage", JSON.stringify(clipboard));
             window.updateClipboardUI();
@@ -1532,7 +1414,8 @@
         window.pasteItem = function() {
             if (!clipboard) return;
 
-            const destPath = currentPath.join("/");
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeFolderId = urlParams.get('folder') || 'root';
 
             if (clipboard.type === 'file') {
                 const doc = documentInventory.find(item => item.id === clipboard.id);
@@ -1545,10 +1428,9 @@
                 }
 
                 let newTitle = doc.title || "Untitled File";
-                const contents = getDirectoryContents();
-                let fileExists = contents.files.some(f => f.title === newTitle);
+                const isDuplicate = documentInventory.some(f => f.parentFolder === activeFolderId && f.title === newTitle);
                 
-                if (fileExists) {
+                if (isDuplicate) {
                     const lastDot = newTitle.lastIndexOf('.');
                     if (lastDot !== -1) {
                         const base = newTitle.substring(0, lastDot);
@@ -1565,9 +1447,10 @@
                     id: newId,
                     title: newTitle,
                     category: doc.category || "Other",
-                    folderPath: destPath,
+                    parentFolder: activeFolderId,
                     description: doc.description || "",
-                    driveLink: doc.driveLink
+                    driveLink: doc.driveLink,
+                    assetType: 'File'
                 };
 
                 let localUploads = [];
@@ -1577,100 +1460,88 @@
                 localUploads.push(clonedDoc);
                 localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
 
-                // Save folder mapping
-                try {
-                    let sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
-                    sheetFolderMap[newId] = destPath;
-                    sheetFolderMap[newTitle] = destPath;
-                    localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
-                } catch (e) {}
-
                 // Push inside active memory
-                const exists = documentInventory.some(doc => doc.id === newId);
-                if (!exists) {
-                    documentInventory.push(clonedDoc);
-                }
+                documentInventory.push(clonedDoc);
 
             } else if (clipboard.type === 'folder') {
-                const sourcePath = clipboard.sourcePath;
-                const folderName = clipboard.name;
+                const folderId = clipboard.id;
 
-                if (sourcePath === destPath || sourcePath === destPath + "/" + folderName || destPath.startsWith(sourcePath + "/")) {
+                // Check nested hierarchy
+                const nestedIds = getNestedItemsToDelete(folderId);
+                if (nestedIds.includes(activeFolderId)) {
                     alert("A folder cannot be copied into itself or nested underneath its own directory structure.");
                     return;
                 }
 
-                let newFolderName = folderName;
-                const contents = getDirectoryContents();
-                let folderExists = contents.folders.some(f => f.name === newFolderName);
+                const folderDoc = documentInventory.find(item => item.id === folderId);
+                if (!folderDoc) {
+                    alert("Source folder not found (it may have been deleted).");
+                    clipboard = null;
+                    localStorage.removeItem("vault_clipboard_storage");
+                    window.updateClipboardUI();
+                    return;
+                }
+
+                let newFolderName = folderDoc.title || "Untitled Folder";
+                let folderExists = documentInventory.some(f => f.parentFolder === activeFolderId && f.title === newFolderName && f.assetType === 'Folder');
                 while (folderExists) {
                     newFolderName = newFolderName + " - Copy";
-                    folderExists = contents.folders.some(f => f.name === newFolderName);
+                    folderExists = documentInventory.some(f => f.parentFolder === activeFolderId && f.title === newFolderName && f.assetType === 'Folder');
                 }
 
-                const newFolderPath = destPath + (destPath.length > 0 ? "/" : "") + newFolderName;
+                // 1. Clone top-level folder
+                const clonedFolderId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
+                const clonedFolder = {
+                    id: clonedFolderId,
+                    title: newFolderName,
+                    category: 'Directory',
+                    parentFolder: activeFolderId,
+                    description: folderDoc.description || "",
+                    driveLink: "javascript:void(0)",
+                    assetType: 'Folder'
+                };
 
-                // 1. Add new folder registry to empty folders
-                let emptyFolders = [];
-                try {
-                    emptyFolders = JSON.parse(localStorage.getItem("vault_custom_empty_folders")) || [];
-                } catch (e) {}
-                if (!emptyFolders.includes(newFolderPath)) {
-                    emptyFolders.push(newFolderPath);
-                }
-
-                // 2. Scan and clone subfolders
-                emptyFolders.forEach(p => {
-                    if (p.startsWith(sourcePath + "/")) {
-                        const subSuffix = p.substring(sourcePath.length);
-                        const targetSubPath = newFolderPath + subSuffix;
-                        if (!emptyFolders.includes(targetSubPath)) {
-                            emptyFolders.push(targetSubPath);
-                        }
-                    }
-                });
-                localStorage.setItem("vault_custom_empty_folders", JSON.stringify(emptyFolders));
-
-                // 3. Scan and clone descendant files
                 let localUploads = [];
                 try {
                     localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
-                } catch (e) {}
-
-                let sheetFolderMap = {};
-                try {
-                    sheetFolderMap = JSON.parse(localStorage.getItem("vault_file_folders_map")) || {};
-                } catch (e) {}
-
-                const filesToClone = documentInventory.filter(doc => {
-                    const fPath = doc.folderPath || "";
-                    return fPath === sourcePath || fPath.startsWith(sourcePath + "/");
-                });
-
-                filesToClone.forEach(doc => {
-                    const relativePath = doc.folderPath.substring(sourcePath.length);
-                    const targetFileFolderPath = newFolderPath + relativePath;
-
-                    const newId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
-                    const clonedDoc = {
-                        id: newId,
-                        title: doc.title,
-                        category: doc.category || "Other",
-                        folderPath: targetFileFolderPath,
-                        description: doc.description || "",
-                        driveLink: doc.driveLink
-                    };
-
-                    localUploads.push(clonedDoc);
-                    sheetFolderMap[newId] = targetFileFolderPath;
-                    sheetFolderMap[doc.title] = targetFileFolderPath;
-
-                    // Push clonedDoc directly to active memory
-                    documentInventory.push(clonedDoc);
-                });
-
+                } catch(e) {}
+                localUploads.push(clonedFolder);
                 localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
-                localStorage.setItem("vault_file_folders_map", JSON.stringify(sheetFolderMap));
+                documentInventory.push(clonedFolder);
+
+                // 2. Recursively clone descendants
+                const queue = [{ src: folderId, dst: clonedFolderId }];
+                try {
+                    localUploads = JSON.parse(localStorage.getItem("vault_local_files")) || [];
+                } catch (e) { localUploads = []; }
+
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    const descendants = documentInventory.filter(item => item.parentFolder === current.src);
+
+                    descendants.forEach(child => {
+                        const newChildId = "VAL-" + Math.floor(1000 + Math.random() * 9000);
+                        const isFold = child.assetType === 'Folder';
+
+                        const clonedDoc = {
+                            id: newChildId,
+                            title: child.title,
+                            category: child.category || "Other",
+                            parentFolder: current.dst,
+                            description: child.description || "",
+                            driveLink: child.driveLink,
+                            assetType: child.assetType
+                        };
+
+                        localUploads.push(clonedDoc);
+                        documentInventory.push(clonedDoc);
+
+                        if (isFold) {
+                            queue.push({ src: child.id, dst: newChildId });
+                        }
+                    });
+                }
+                localStorage.setItem("vault_local_files", JSON.stringify(localUploads));
             }
 
             renderVault();
