@@ -181,7 +181,7 @@
                 
                 // Normalize and set robust defaults
                 obj.id = obj.id || ("VAL-" + Math.floor(1000 + Math.random() * 9000));
-                obj.title = obj.title || (defaultType === 'Folder' ? "Unidentified Folder" : "Unidentified Asset");
+                obj.title = obj.title || (defaultType === 'Folder' ? "Folder (" + obj.id + ")" : "Asset (" + obj.id + ")");
                 obj.category = obj.category || (defaultType === 'Folder' ? "Directory" : "Other");
                 obj.description = obj.description || "";
                 obj.driveLink = obj.driveLink || (defaultType === 'Folder' ? "javascript:void(0)" : "javascript:void(0)");
@@ -575,6 +575,7 @@
                     description: description,
                     fileDescription: description,
                     parentFolder: parentFolderId,
+                    parenFolder: parentFolderId,
                     assetType: assetType,
                     driveLink: payload.driveLink || 'javascript:void(0)'
                 };
@@ -1296,6 +1297,7 @@
                     description: item.description || '',
                     fileDescription: item.description || '',
                     parentFolder: item.parentFolder || 'root',
+                    parenFolder: item.parentFolder || 'root',
                     assetType: type === 'folder' ? 'Folder' : 'File',
                     driveLink: item.driveLink || 'javascript:void(0)'
                 };
