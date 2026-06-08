@@ -823,6 +823,7 @@
                     const docId = docMatch[2];
                     return `https://docs.google.com/${type}/d/${docId}/preview`;
                 }
+            } else if (driveLink.startsWith("data:")) {
             }
             
             if (fileId) {
