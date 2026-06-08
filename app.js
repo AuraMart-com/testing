@@ -31,7 +31,7 @@
                         const isMock = dLink.includes("javascript:alert('SECURED") || 
                                        dLink.includes("SANDBOX MODE") || 
                                        ["VAL-1092", "VAL-2201", "VAL-8402", "VAL-3019", "VAL-7759"].includes(item.id) ||
-                                       titleLower.includes("semester_marksheet_v1") ||
+                                       titleLower.includes("rae lil") ||
                                        titleLower.includes("admission_fee_receipt") ||
                                        titleLower.includes("uidai_aadhaar_verification") ||
                                        titleLower.includes("secure_vault_manifest");
