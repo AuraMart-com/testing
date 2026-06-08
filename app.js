@@ -156,10 +156,30 @@
                 const obj = {};
                 headers.forEach((header, idx) => {
                     let value = currentLine[idx] ? currentLine[idx].trim() : "";
-                    obj[header] = value;
+                    const lowerHeader = header.toLowerCase().replace(/[^a-z0-9]/g, "");
+                    
+                    // Route common variation synonyms to standardized runtime keys
+                    if (lowerHeader === 'id') {
+                        obj.id = value;
+                    } else if (lowerHeader === 'title' || lowerHeader === 'filename' || lowerHeader === 'name' || lowerHeader === 'foldername') {
+                        obj.title = value;
+                    } else if (lowerHeader === 'category' || lowerHeader === 'filecategory') {
+                        obj.category = value;
+                    } else if (lowerHeader === 'description' || lowerHeader === 'filedescription' || lowerHeader === 'desc') {
+                        obj.description = value;
+                    } else if (lowerHeader === 'drivelink' || lowerHeader === 'link' || lowerHeader === 'url' || lowerHeader === 'fileurl') {
+                        obj.driveLink = value;
+                    } else if (lowerHeader === 'parentfolder' || lowerHeader === 'parent' || lowerHeader === 'parentid') {
+                        obj.parentFolder = value;
+                    } else if (lowerHeader === 'assettype' || lowerHeader === 'type') {
+                        obj.assetType = value;
+                    } else {
+                        // Maintain fallback original key as well
+                        obj[header] = value;
+                    }
                 });
                 
-                // Normalize to standard model
+                // Normalize and set robust defaults
                 obj.id = obj.id || ("VAL-" + Math.floor(1000 + Math.random() * 9000));
                 obj.title = obj.title || (defaultType === 'Folder' ? "Unidentified Folder" : "Unidentified Asset");
                 obj.category = obj.category || (defaultType === 'Folder' ? "Directory" : "Other");
@@ -168,7 +188,7 @@
                 
                 // Map parent folder hierarchy, default to root
                 obj.parentFolder = obj.parentFolder || "root";
-                obj.assetType = defaultType;
+                obj.assetType = obj.assetType || defaultType;
 
                 parsedArray.push(obj);
             }
