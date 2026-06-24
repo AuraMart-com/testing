@@ -3,42 +3,305 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirecting...</title>
-    
-    <meta http-equiv="refresh" content="0; url=https://auramart-com.github.io/docslist/">
-    
-    <style>
-        body {
-            background-color: #0d0d0d;
-            color: #a3a3a3;
-            font-family: monospace;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .loader {
-            text-align: center;
-        }
-        a {
-            color: #00ffcc;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <title>AuraFiles</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/d/d6/Files_App_icon_iOS.png">
+    <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js"
+      }
+    }
+    </script>
 </head>
 <body>
 
-    <div class="loader">
-        <p>REDIRECTING TO VAULT LAYER...</p>
-        <p>If you are not forwarded automatically, <a href="https://auramart-com.github.io/docslist/">click here</a>.</p>
+    <div class="vault-wrapper" style="margin-top: 25px;">
+        <div class="web-control-bar">
+            <button class="web-control-btn" title="Go Back" onclick="window.history.back()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                Back
+            </button>
+            <button class="web-control-btn" title="Refresh Page" onclick="window.location.reload()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                Refresh
+            </button>
+        </div>
+        <header>
+            <h2>AuraFiles</h2>
+            <div id="syncStatus" class="sync-status">● CONNECTING</div>
+        </header>
+
+        <!-- Diagnostic Alert Banner for invalid/unconfigured backend URLs -->
+        <div id="backendDiagnosticBanner" class="diagnostic-banner" style="display: none;">
+            <div class="diagnostic-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="diagnostic-icon">⚠️</span>
+                    <strong style="letter-spacing: 1.5px;">Setup Needed: Missing Backend URL</strong>
+                </div>
+                <button class="diagnostic-toggle-btn" onclick="toggleDiagnosticDetails()">[Show Connection Steps]</button>
+            </div>
+            <div class="diagnostic-body">
+                <p>The current <strong>BACKEND_API_URL</strong> points to a Google Apps Script <strong>Library/Editor</strong> URL instead of an active <strong>Web App execution (<code>/exec</code>)</strong> endpoint.</p>
+                <p style="margin-top: 6px; color: var(--accent);">This will cause uploads to Google Drive and deletions (Cloud Purge) to fail with network errors (Failed to Fetch) as libraries do not accept direct API POST/GET traffic.</p>
+                
+                <div id="diagnosticDetails" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(239, 68, 68, 0.3);">
+                    <h4 style="color: #60a5fa; margin-bottom: 8px; font-size: 0.95rem;">HOW TO CONNECT YOUR CLOUD VAULT BACKEND PROPERLY:</h4>
+                    <ol style="margin-left: 20px; line-height: 1.6; font-size: 0.85rem; margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;">
+                        <li>Open your <strong>Google Apps Script</strong> project editor.</li>
+                        <li>Copy the customized Apps Script template code shown below into your editor.</li>
+                        <li>Click on <strong>Deploy</strong> (top-right corner of the Apps Script page).</li>
+                        <li>Select <strong>New deployment</strong>.</li>
+                        <li>Click the gear icon next to "Select type" and select <strong>Web app</strong>.</li>
+                        <li>Fill in the deployment parameters:
+                            <ul style="margin-left: 15px; margin-top: 5px; list-style-type: square; display: flex; flex-direction: column; gap: 3px;">
+                                <li><strong>Description:</strong> Secure Document Vault Backend</li>
+                                <li><strong>Execute as:</strong> <code>Me (your Google account)</code> <em>(Crucial so it has permission to write to your Drive!)</em></li>
+                                <li><strong>Who has access:</strong> <code>Anyone</code> <em>(Crucial so this React-based Vault can send upload API requests!)</em></li>
+                            </ul>
+                        </li>
+                        <li>Click <strong>Deploy</strong>. Google will ask for permission authorization. Complete it.</li>
+                        <li>Copy the generated <strong>Web App URL</strong> (it must end with <code>/exec</code>).</li>
+                        <li>Paste that exact <code>/exec</code> URL as the value for <code>BACKEND_API_URL</code> around line 7 of <strong>app.js</strong>.</li>
+                    </ol>
+
+                    <h4 style="color: #10b981; margin-top: 15px; margin-bottom: 8px; font-size: 0.95rem;">📋 READY-TO-USE APPS SCRIPT CODE TEMPLATE:</h4>
+                    <p style="font-size: 0.8rem; margin-bottom: 10px; color: var(--text-muted);">This script template is pre-configured to sync files directly from your Drive Folder <code>1rbR0YnwU_9tPmeFqyhIR0mZVjFIYx6Sy</code>:</p>
+                    <textarea id="appsScriptTemplateArea" readonly style="width: 100%; height: 260px; background: #030712; color: #38bdf8; border: 1px solid var(--border); border-radius: 4px; padding: 10px; font-family: monospace; font-size: 0.8rem; outline: none; resize: vertical;" onclick="this.select()"></textarea>
+                    <button type="button" class="view-btn" onclick="copyAppsScriptTemplate()" style="margin-top: 8px; padding: 6px 12px; font-size: 0.75rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 4px; cursor: pointer;">📋 Copy Script Template</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-row">
+            <input type="text" id="searchBox" class="search-engine" placeholder="Connecting to cloud database..." disabled>
+            <div class="dropdown-wrapper">
+                <button class="add-btn" id="addBtn" onclick="toggleDropdown(event)">+</button>
+                <div class="dropdown-menu" id="addDropdown">
+                    <button onclick="triggerNewFile(event)">📄 New File</button>
+                    <button onclick="triggerNewFolder(event)">📁 New Folder</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="breadcrumbs-container" id="breadcrumbs"></div>
+
+        <div class="nav-control-panel" id="navControlPanel">
+            <span class="control-panel-title">Navigation</span>
+            <span id="clipboardNotice" style="margin-left: auto; margin-right: 12px; font-size: 0.8rem; color: #10b981; display: none; font-weight: bold; background: rgba(16, 185, 129, 0.1); padding: 4px 10px; border-radius: 4px; border: 1px dashed rgba(16, 185, 129, 0.4);">
+                📋 COPIED: <span id="clipboardItemName">None</span>
+            </span>
+            <div class="nav-control-buttons">
+                <button id="navHomeBtn" class="nav-btn-icon" title="Go to Root Folder" onclick="navigateHome()" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                </button>
+                <button id="navBackBtn" class="nav-btn-icon" title="Go Back One Folder" onclick="navigateBack()" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                </button>
+                <button id="navPasteBtn" class="nav-btn-icon" title="Paste Copied Item" onclick="pasteItem()" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                </button>
+                <button id="navRefreshBtn" class="nav-btn-icon" title="Refresh Directory Contents" onclick="refreshDatabase()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                </button>
+                <button id="navSyncDriveBtn" class="nav-btn-icon" style="color: #10b981;" title="Sync Google Drive to Website" onclick="syncDriveToDatabase()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;"><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"></path><polyline points="8 12 12 16 16 12"></polyline><line x1="12" y1="16" x2="12" y2="8"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <main id="vaultGrid" class="grid-output"></main>
     </div>
 
-    <script>
-        window.location.href = "https://auramart-com.github.io/docslist/";
-    </script>
+    <div id="uploadModal" class="modal-overlay">
+        <div class="modal-window">
+            <h3>New File</h3>
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label>CHOOSE FILES</label>
+                    <input type="file" id="fileInput" required multiple>
+                </div>
+                <div class="form-group">
+                    <label>FILE NAME</label>
+                    <input type="text" id="fileNameInput" placeholder="Specify document display title..." required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>CATEGORY</label>
+                    <input type="text" id="fileCategoryTagInput" placeholder="e.g. Invoice, Identification, Receipt, Education..." value="Other" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>DIRECTORY</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="fileCategoryDisplay" readonly style="background-color: rgba(255, 255, 255, 0.05); color: var(--accent); cursor: not-allowed; border-color: var(--border); width: 100%; border-radius: 4px; padding: 10px; font-family: var(--font-mono); font-size: 0.85rem;" value="📁 ROOT">
+                        <input type="hidden" id="fileCategory" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>DESCRIPTION</label>
+                    <textarea id="fileDescription" rows="3" placeholder="Enter file tracking descriptions or contextual metadata tags..." required></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeModal()">Cancel</button>
+                    <button type="submit" id="submitBtn" class="submit-btn">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="folderModal" class="modal-overlay">
+        <div class="modal-window">
+            <h3>New Folder</h3>
+            <form id="folderForm">
+                <div class="form-group">
+                    <label>FOLDER NAME</label>
+                    <input type="text" id="folderNameInput" placeholder="Enter custom folder name..." required autocomplete="off">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeFolderModal()">Cancel</button>
+                    <button type="submit" class="submit-btn" id="submitFolderBtn">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="detailsModal" class="modal-overlay">
+        <div class="modal-window">
+            <h3>Details</h3>
+            <div id="detailsContent" class="details-body">
+                <!-- Injected dynamically -->
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="cancel-btn" style="width: 100%; margin-top: 10px;" onclick="closeDetailsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="renameModal" class="modal-overlay">
+        <div class="modal-window">
+            <h3>Rename File</h3>
+            <form id="renameForm">
+                <input type="hidden" id="renameTargetType">
+                <input type="hidden" id="renameTargetId">
+                <input type="hidden" id="renameTargetOldName">
+                <div class="form-group">
+                    <label id="renameLabel">NEW NAME</label>
+                    <input type="text" id="renameInput" required autocomplete="off">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeRenameModal()">Cancel</button>
+                    <button type="submit" class="submit-btn" id="submitRenameBtn">Rename</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-window">
+            <h3>Edit File</h3>
+            <form id="editForm">
+                <input type="hidden" id="editTargetType">
+                <input type="hidden" id="editTargetId">
+                <div class="form-group">
+                    <label>NAME</label>
+                    <input type="text" id="editItemName" required autocomplete="off">
+                </div>
+                <div class="form-group" id="editItemCategoryGroup">
+                    <label>CATEGORY</label>
+                    <input type="text" id="editItemCategory" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>DESCRIPTION</label>
+                    <textarea id="editItemDescription" rows="3" required></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="submit-btn" id="submitEditBtn">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="deleteModal" class="modal-overlay">
+        <div class="modal-window" style="border-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);">
+            <h3 style="color: #ef4444;">Permanent Deletion</h3>
+            <form id="deleteForm">
+                <input type="hidden" id="deleteTargetType">
+                <input type="hidden" id="deleteTargetId">
+                <div class="form-group">
+                    <p style="color: var(--text); font-size: 0.95rem; margin-bottom: 12px; line-height: 1.45;" id="deletePromptMessage"></p>
+                    <p style="color: #ef4444; font-size: 0.8rem; letter-spacing: 0.5px; font-weight: bold; margin-top: 5px;">WARNING: THIS ACTION CANNOT BE UNDONE.</p>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
+                    <button type="submit" class="submit-btn" style="background-color: #ef4444; color: white;" id="submitDeleteBtn">Confirm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Relocation Move Modal -->
+    <div id="moveModal" class="modal-overlay">
+        <div class="modal-window">
+            <h3>🚚 Move Item</h3>
+            <form id="moveForm">
+                <input type="hidden" id="moveTargetType">
+                <input type="hidden" id="moveTargetId">
+                <div class="form-group">
+                    <label id="moveLabel">SELECT DESTINATION FOLDER</label>
+                    <select id="moveDestinationSelect" required style="width: 100%; padding: 12px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 4px; outline: none; font-family: monospace;">
+                        <!-- Dynamic list of folders, plus 'root' -->
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeMoveModal()">Cancel</button>
+                    <button type="submit" class="submit-btn" id="submitMoveBtn">Move</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Floating Multi-Select Action Bar -->
+    <div id="multiSelectBar" class="multi-select-bar">
+        <div class="multi-select-info">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <span id="multiSelectCount">0 items selected</span>
+        </div>
+        <div class="multi-select-actions">
+            <button class="multi-btn multi-copy-btn" onclick="multiCopySelected()" title="Copy selected items">
+                Copy
+            </button>
+            <button class="multi-btn multi-move-btn" onclick="multiMoveSelected()" title="Move selected items">
+                Move
+            </button>
+            <button class="multi-btn multi-delete-btn" onclick="multiDeleteSelected()" title="Delete selected items">
+                Delete
+            </button>
+            <button class="multi-btn multi-clear-btn" onclick="clearSelected()">✕ Clear</button>
+        </div>
+    </div>
+
+    <!-- Universal File Viewer Modal -->
+    <div id="viewerModal" class="modal-overlay">
+        <div class="modal-window file-viewer-window">
+            <div class="viewer-header">
+                <h3 id="viewerTitle">File Preview</h3>
+                <div class="viewer-actions">
+                    <button type="button" id="viewerDownloadBtn" class="viewer-secondary-btn" title="Download copy">
+                        📥 Download
+                    </button>
+                    <button type="button" id="viewerOpenTabBtn" class="viewer-secondary-btn" title="Open in raw tab">
+                        ↗ Open Tab
+                    </button>
+                    <button type="button" class="cancel-btn close-viewer-btn" onclick="closeViewerModal()">✕</button>
+                </div>
+            </div>
+            <div id="viewerBody" class="viewer-body">
+                <!-- Dynamically populated loading, preview iframe, image, or text code container -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
 </body>
 </html>
