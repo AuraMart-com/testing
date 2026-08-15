@@ -6,8 +6,9 @@
     <title>Copy servie</title>
 </head>
 <body>
-    <h2>
-        # Export current security policy
+    <pre>
+        <h2>
+            # Export current security policy
 secedit /export /cfg C:\secpol.cfg
 
 # Disable complexity requirement in the config file
@@ -18,6 +19,7 @@ secedit /configure /db $env:windir\security\local.sdb /cfg C:\secpol.cfg /areas 
 
 # Clean up temporary config file
 Remove-Item C:\secpol.cfg
-    </h2>
+        </h2>
+    </pre>
 </body>
 </html>
