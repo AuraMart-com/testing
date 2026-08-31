@@ -1,25 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Copy servie</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #ffffff;
+      margin: 0;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-group {
+      position: relative;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 22px 16px 8px 16px;
+      font-size: 16px;
+      border: 1px solid #ccd0d5;
+      border-radius: 12px;
+      outline: none;
+      background-color: #fff;
+      transition: border-color 0.2s ease;
+    }
+
+    .input-field:focus {
+      border-color: #1b74e4;
+    }
+
+    /* Floating label styling */
+    .floating-label {
+      position: absolute;
+      left: 16px;
+      top: 14px;
+      font-size: 16px;
+      color: #65676b;
+      pointer-events: none;
+      transition: all 0.15s ease-in-out;
+    }
+
+    /* Moves label up when input has content or focus */
+    .input-field:focus ~ .floating-label,
+    .input-field:not(:placeholder-shown) ~ .floating-label {
+      top: 6px;
+      font-size: 12px;
+      color: #65676b;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background-color: #0064e0;
+      color: #ffffff;
+      border: none;
+      border-radius: 20px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .login-btn:hover {
+      background-color: #0052b8;
+    }
+
+    .forgot-password {
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .forgot-password a {
+      color: #1c1e21;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .forgot-password a:hover {
+      text-decoration: underline;
+    }
+
+    .create-account-btn {
+      width: 100%;
+      padding: 12px;
+      background-color: #ffffff;
+      color: #0064e0;
+      border: none;
+      border-radius: 20px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      border: 1px solid #0064e0;
+      margin-top: 50px;
+    }
+  </style>
 </head>
 <body>
-    <pre>
-        <h2>
-            # Export current security policy
-secedit /export /cfg C:\secpol.cfg
 
-# Disable complexity requirement in the config file
-(Get-Content C:\secpol.cfg) -replace 'PasswordComplexity = 1', 'PasswordComplexity = 0' | Set-Content C:\secpol.cfg
+  <div class="login-container">
+    <form id="loginForm">
+      
+      <div class="form-group" style="margin-bottom: 16px;">
+        <input type="email" id="email" class="input-field" placeholder=" " required>
+        <label for="email" class="floating-label">Email address or mobile number</label>
+      </div>
 
-# Apply the updated policy
-secedit /configure /db $env:windir\security\local.sdb /cfg C:\secpol.cfg /areas SECURITYPOLICY
+      <div class="form-group" style="margin-bottom: 16px;">
+        <input type="password" id="password" class="input-field" placeholder=" " required>
+        <label for="password" class="floating-label">Password</label>
+      </div>
 
-# Clean up temporary config file
-Remove-Item C:\secpol.cfg
-        </h2>
-    </pre>
+      <button type="submit" id="loginBtn" class="login-btn">Log in</button>
+
+      <div class="forgot-password">
+        <a href="#">Forgotten password?</a>
+      </div>
+      
+      <div>
+        <button type="button" id="createAccountBtn" class="create-account-btn">Create New Account</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Firebase Integration Script -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithEmailAndPassword, 
+      createUserWithEmailAndPassword 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    // Replace with your actual Firebase Web App credentials
+    const firebaseConfig = {
+        apiKey: "AIzaSyBVKD-ta5RtvNQMX1k1KMaklAZuBf4T-uA",
+        authDomain: "thredz-1901b.firebaseapp.com",
+        projectId: "thredz-1901b",
+        storageBucket: "thredz-1901b.firebasestorage.app",
+        messagingSenderId: "754707217410",
+        appId: "1:754707217410:web:247c2e36a86f83aa00fb1b"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const loginForm = document.getElementById('loginForm');
+    const createAccountBtn = document.getElementById('createAccountBtn');
+
+    // Handle User Login
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault(); // Stop form from re-loading the page
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        alert(`Login Successful! Welcome: ${userCredential.user.email}`);
+        // Redirect logic here: window.location.href = '/dashboard.html';
+      } catch (error) {
+        alert(`Login Error: ${error.message}`);
+      }
+    });
+
+    // Handle User Registration (Create New Account)
+    createAccountBtn.addEventListener('click', async () => {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        alert("Please enter an email and password first.");
+        return;
+      }
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        alert(`Account created successfully for ${userCredential.user.email}`);
+      } catch (error) {
+        alert(`Registration Error: ${error.message}`);
+      }
+    });
+  </script>
+
 </body>
 </html>
